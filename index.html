@@ -220,6 +220,154 @@
   .empty{text-align:center;padding:60px 20px;color:var(--muted);border:1px dashed var(--line);border-radius:14px;}
   .empty strong{color:var(--text);display:block;margin-bottom:6px;font-size:16px;}
 
+  /* ---- Grilla de series (estilo streaming) ---- */
+  .series-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(110px,1fr));
+    gap:14px;
+  }
+  .grid-card{
+    position:relative;
+    border-radius:12px;
+    overflow:hidden;
+    cursor:pointer;
+    background:var(--card);
+    border:1px solid var(--line);
+    transition:transform .15s, border-color .15s;
+  }
+  .grid-card:hover{transform:translateY(-3px);border-color:var(--gold);}
+  .grid-poster{
+    width:100%;aspect-ratio:2/3;object-fit:cover;
+    background:var(--bg-soft);display:block;
+  }
+  .grid-poster-fallback{
+    width:100%;aspect-ratio:2/3;
+    background:linear-gradient(160deg,var(--bg-soft),var(--card));
+    display:flex;align-items:center;justify-content:center;
+    padding:10px;text-align:center;
+    font-family:'Bricolage Grotesque',serif;font-size:13px;
+    color:var(--muted);
+  }
+  .grid-overlay{
+    position:absolute;left:0;right:0;bottom:0;
+    padding:26px 8px 8px;
+    background:linear-gradient(to top, #0d0d12f2 25%, transparent);
+    pointer-events:none;
+  }
+  .grid-title{
+    font-size:12px;font-weight:600;line-height:1.25;margin:0 0 4px;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  }
+  .grid-next{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;color:var(--gold);
+  }
+  .grid-next.done{color:var(--violet);}
+  .grid-next.pending{color:var(--muted);}
+  .grid-progress{
+    position:absolute;left:0;right:0;bottom:0;
+    height:3px;background:#00000066;
+  }
+  .grid-progress-fill{height:100%;background:var(--gold);}
+  .grid-badge{
+    position:absolute;top:7px;right:7px;
+    width:20px;height:20px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:700;
+  }
+  .grid-badge.completada{background:var(--violet);color:#fff;}
+
+  /* ---- Vista de detalle de serie ---- */
+  .detail-view{display:none;}
+  .detail-view.active{display:block;}
+  .detail-back{
+    background:none;border:none;color:var(--teal);
+    font-family:inherit;font-size:13.5px;cursor:pointer;
+    padding:0;margin-bottom:16px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .detail-hero{
+    position:relative;
+    border-radius:16px;
+    overflow:hidden;
+    margin-bottom:18px;
+    border:1px solid var(--line);
+    background:var(--card);
+  }
+  .detail-backdrop{
+    position:absolute;inset:0;
+    background-size:cover;background-position:center;
+    opacity:.22;
+  }
+  .detail-hero-inner{
+    position:relative;
+    display:flex;gap:16px;
+    padding:18px;
+    background:linear-gradient(to right, #16161ee6, #16161eb3);
+  }
+  .detail-poster{
+    width:88px;height:132px;border-radius:8px;object-fit:cover;
+    background:var(--bg-soft);flex-shrink:0;
+    box-shadow:0 8px 20px -6px #000000aa;
+  }
+  .detail-info{flex:1;min-width:0;}
+  .detail-title{
+    font-family:'Bricolage Grotesque',serif;
+    font-size:21px;font-weight:700;margin:0 0 4px;line-height:1.2;
+  }
+  .detail-genres{font-size:11.5px;color:var(--muted);margin-bottom:8px;}
+  .detail-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+  .detail-actions .btn{padding:7px 11px;font-size:11.5px;}
+
+  /* episodios con nombre y fecha */
+  .ep-list{display:flex;flex-direction:column;gap:6px;}
+  .ep-row{
+    display:flex;align-items:center;gap:12px;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:11px 13px;
+    cursor:pointer;
+    transition:border-color .12s, background .12s;
+  }
+  .ep-row:hover{border-color:var(--gold);}
+  .ep-row.watched{background:#e8a33d0f;border-color:#e8a33d40;}
+  .ep-check{
+    width:22px;height:22px;border-radius:6px;
+    border:1.5px solid var(--line);
+    flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    font-size:13px;color:transparent;
+    transition:background .12s, border-color .12s;
+  }
+  .ep-row.watched .ep-check{
+    background:var(--gold);border-color:var(--gold);color:#1a1204;
+  }
+  .ep-num{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;color:var(--muted);
+    width:34px;flex-shrink:0;
+  }
+  .ep-row.watched .ep-num{color:var(--gold);}
+  .ep-meta{flex:1;min-width:0;}
+  .ep-name{
+    font-size:13.5px;font-weight:500;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .ep-date{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;color:var(--muted);margin-top:2px;
+  }
+  .ep-date.future{color:var(--teal);}
+  .ep-loading{
+    text-align:center;padding:20px;color:var(--muted);
+    font-family:'JetBrains Mono',monospace;font-size:12px;
+  }
+  .season-actions{
+    display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;
+  }
+  .season-actions .btn{padding:7px 11px;font-size:11.5px;}
+
   .ticket{position:relative;background:var(--card);border-radius:14px;margin-bottom:18px;padding:20px 20px 18px 30px;border:1px solid var(--line);overflow:hidden;}
   .ticket::before{content:"";position:absolute;left:0;top:0;bottom:0;width:14px;background-image: radial-gradient(circle at 0 12px, var(--bg) 6px, transparent 6.5px);background-repeat:repeat-y;background-size:14px 24px;background-position:-4px 0;}
   .ticket-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px;}
@@ -436,6 +584,7 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
 
   <!-- ===== TAB: MIS SERIES ===== -->
   <section class="tab-section" id="tab-series">
+    <div id="listControls">
     <div class="toolbar">
       <div class="search-box"><input id="searchInput" type="text" placeholder="Buscar en mis series..."></div>
       <button class="btn btn-primary" id="toggleAddBtn">+ Agregar serie</button>
@@ -469,6 +618,8 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
     <div class="stats-bar" id="statsBar"></div>
     <div class="filter-row" id="filterRow"></div>
     <div id="seriesContainer"></div>
+    </div>
+    <div class="detail-view" id="detailView"></div>
   </section>
 
   <!-- ===== TAB: CALENDARIO ===== -->
@@ -560,6 +711,7 @@ function tmdbAuthed(url){
 
 // ---------------- tabs ----------------
 function switchTab(name){
+  if(name !== 'series') openSeriesId = null;
   document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
@@ -623,6 +775,7 @@ async function tmdbGetTrending(){
 function extractMeta(details){
   return {
     poster: details.poster_path ? TMDB_IMG + details.poster_path : null,
+    backdrop: details.backdrop_path ? 'https://image.tmdb.org/t/p/w780' + details.backdrop_path : null,
     genres: (details.genres || []).map(g => g.name),
     runtime: (details.episode_run_time && details.episode_run_time.length) ? details.episode_run_time[0] : null,
     nextEpisode: details.next_episode_to_air ? {
@@ -633,6 +786,36 @@ function extractMeta(details){
     } : null,
     tmdbStatus: details.status || ''
   };
+}
+
+// Cache de episodios: { "tmdbId:season": [{n, name, air_date}] }
+const EPCACHE_KEY = 'episode-cache';
+let episodeCache = {};
+try{ episodeCache = JSON.parse(localStorage.getItem(EPCACHE_KEY) || '{}'); }catch(e){ episodeCache = {}; }
+
+function saveEpisodeCache(){
+  try{ localStorage.setItem(EPCACHE_KEY, JSON.stringify(episodeCache)); }
+  catch(e){ /* si se llena, no es crítico */ }
+}
+
+async function fetchSeasonEpisodes(tmdbId, seasonNumber){
+  const key = `${tmdbId}:${seasonNumber}`;
+  if(episodeCache[key]) return episodeCache[key];
+  if(!apiKey || !tmdbId) return null;
+  const { url, opts } = tmdbAuthed(`${TMDB_BASE}/tv/${tmdbId}/season/${seasonNumber}?language=es-ES`);
+  try{
+    const res = await fetch(url, opts);
+    if(!res.ok) return null;
+    const data = await res.json();
+    const eps = (data.episodes || []).map(e => ({
+      n: e.episode_number,
+      name: e.name || '',
+      air_date: e.air_date || ''
+    }));
+    episodeCache[key] = eps;
+    saveEpisodeCache();
+    return eps;
+  }catch(e){ return null; }
 }
 
 function addSeriesFromTMDB(details){
@@ -669,12 +852,18 @@ async function syncSeries(seriesId){
       s.seasons.push({ number: se.season_number, watched: new Array(se.episode_count).fill(false) });
     }
   });
+  // limpiar cache de episodios de esta serie para que se recarguen nombres/fechas
+  Object.keys(episodeCache).forEach(k => {
+    if(k.startsWith(s.tmdbId + ':')) delete episodeCache[k];
+  });
+  saveEpisodeCache();
   saveData();
   render();
 }
 function removeSeries(id){
   if(!confirm('¿Eliminar esta serie y todo su progreso?')) return;
   seriesList = seriesList.filter(s => s.id !== id);
+  if(openSeriesId === id) openSeriesId = null;
   saveData();
   render();
 }
@@ -762,10 +951,20 @@ function renderFilters(){
 }
 function setFilter(key){ currentFilter = key; render(); }
 
+let openSeriesId = null;
+
 function render(){
   renderStats();
   renderFilters();
   if(document.getElementById('tab-home').classList.contains('active')) renderDashboard();
+
+  if(openSeriesId){
+    renderDetail(openSeriesId);
+    return;
+  }
+  document.getElementById('listControls').style.display = 'block';
+  document.getElementById('detailView').classList.remove('active');
+
   const container = document.getElementById('seriesContainer');
   const query = document.getElementById('searchInput').value.trim().toLowerCase();
   let filtered = seriesList.filter(s => s.title.toLowerCase().includes(query));
@@ -776,17 +975,67 @@ function render(){
   });
 
   if(seriesList.length === 0){
-    container.innerHTML = `<div class="empty"><strong>Todavía no agregaste ninguna serie</strong>Tocá "+ Agregar serie" para empezar tu bitácora.</div>`;
+    container.innerHTML = `<div class="empty"><strong>Todavía no agregas ninguna serie</strong>Toca "+ Agregar serie" para empezar tu bitácora.</div>`;
     return;
   }
   if(filtered.length === 0){
     container.innerHTML = `<div class="empty"><strong>Sin resultados</strong>No encontré ninguna serie que coincida con eso.</div>`;
     return;
   }
-  container.innerHTML = filtered.map(s => renderTicket(s)).join('');
+  container.innerHTML = `<div class="series-grid">` + filtered.map(s => renderGridCard(s)).join('') + `</div>`;
 }
 
-function renderTicket(s){
+function renderGridCard(s){
+  const { total, watched } = computeProgress(s);
+  const pct = total ? Math.round((watched/total)*100) : 0;
+  const next = findNext(s);
+  const status = computeStatus(s);
+
+  let nextText, nextClass;
+  if(status === 'completada'){ nextText = 'Completa'; nextClass = 'done'; }
+  else if(status === 'viendo' && next){ nextText = `T${next.season} · E${next.episode}`; nextClass = ''; }
+  else if(status === 'pendiente'){ nextText = `${total} caps`; nextClass = 'pending'; }
+  else { nextText = 'Sin capítulos'; nextClass = 'pending'; }
+
+  const posterHtml = s.poster
+    ? `<img class="grid-poster" src="${s.poster}" alt="" loading="lazy">`
+    : `<div class="grid-poster-fallback">${escapeHtml(s.title)}</div>`;
+  const badge = status === 'completada' ? `<div class="grid-badge completada">✓</div>` : '';
+
+  return `<div class="grid-card" onclick="openDetail('${s.id}')">
+    ${posterHtml}
+    ${badge}
+    <div class="grid-overlay">
+      <p class="grid-title">${escapeHtml(s.title)}</p>
+      <span class="grid-next ${nextClass}">${nextText}</span>
+    </div>
+    ${total ? `<div class="grid-progress"><div class="grid-progress-fill" style="width:${pct}%"></div></div>` : ''}
+  </div>`;
+}
+
+function openDetail(seriesId){
+  openSeriesId = seriesId;
+  const s = seriesList.find(x => x.id === seriesId);
+  const next = findNext(s);
+  if(activeSeasonBySeries[seriesId] == null && s.seasons.length){
+    activeSeasonBySeries[seriesId] = next ? next.season : s.seasons[0].number;
+  }
+  render();
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+function closeDetail(){
+  openSeriesId = null;
+  render();
+}
+
+function renderDetail(seriesId){
+  const s = seriesList.find(x => x.id === seriesId);
+  if(!s){ closeDetail(); return; }
+
+  document.getElementById('listControls').style.display = 'none';
+  const view = document.getElementById('detailView');
+  view.classList.add('active');
+
   const { total, watched } = computeProgress(s);
   const pct = total ? Math.round((watched/total)*100) : 0;
   const next = findNext(s);
@@ -794,52 +1043,119 @@ function renderTicket(s){
 
   let statusText;
   if(status === 'sindatos') statusText = 'Sin capítulos cargados';
-  else if(status === 'viendo' && next) statusText = `Seguís en T${next.season} · Ep ${next.episode}`;
-  else if(status === 'completada') statusText = `✓ Completa — ${watched}/${total}`;
+  else if(status === 'viendo' && next) statusText = `Sigues en T${next.season} · Ep ${next.episode}`;
+  else if(status === 'completada') statusText = `Completa — ${watched}/${total}`;
   else statusText = `Pendiente · ${total} capítulos`;
-  const statusHtml = `<span class="status-badge ${status}"><span class="dot"></span>${statusText}</span>`;
 
-  if(activeSeasonBySeries[s.id] == null && s.seasons.length){
-    activeSeasonBySeries[s.id] = (next ? next.season : s.seasons[0].number);
-  }
   const activeSeason = activeSeasonBySeries[s.id];
   const seasonsTabsHtml = s.seasons.slice().sort((a,b) => a.number - b.number)
-    .map(se => `<button class="season-tab ${se.number === activeSeason ? 'active' : ''}" onclick="setActiveSeason('${s.id}', ${se.number})">T${se.number}</button>`)
+    .map(se => {
+      const w = se.watched.filter(Boolean).length;
+      const done = w === se.watched.length && se.watched.length > 0;
+      return `<button class="season-tab ${se.number === activeSeason ? 'active' : ''}" onclick="setActiveSeason('${s.id}', ${se.number})">T${se.number}${done ? ' ✓' : ''}</button>`;
+    })
     .join('') + `<button class="season-tab add" onclick="addSeason('${s.id}')">+ temporada</button>`;
 
-  const currentSeason = s.seasons.find(se => se.number === activeSeason);
-  const episodesHtml = currentSeason
-    ? currentSeason.watched.map((w, i) => `<div class="ep ${w ? 'watched' : ''}" onclick="toggleEpisode('${s.id}', ${currentSeason.number}, ${i})" title="Episodio ${i+1}${w ? ' · visto' : ''}">${i+1}</div>`).join('')
-    : '';
-  const seasonRemoveHtml = currentSeason ? `<button class="season-remove" onclick="removeSeason('${s.id}', ${currentSeason.number})">eliminar T${currentSeason.number}</button>` : '';
-  const posterHtml = s.poster ? `<img class="ticket-poster" src="${s.poster}" alt="">` : '';
-  const genresHtml = (s.genres && s.genres.length) ? `<div class="ticket-genres">${escapeHtml(s.genres.slice(0,3).join(' · '))}</div>` : '';
-  const syncBtn = s.tmdbId ? `<button class="icon-btn sync" onclick="syncSeries('${s.id}')" title="Actualizar datos de TMDB">🔄</button>` : '';
+  const backdropHtml = s.backdrop
+    ? `<div class="detail-backdrop" style="background-image:url('${s.backdrop}')"></div>` : '';
+  const posterHtml = s.poster ? `<img class="detail-poster" src="${s.poster}" alt="">` : `<div class="detail-poster"></div>`;
+  const genresHtml = (s.genres && s.genres.length)
+    ? `<div class="detail-genres">${escapeHtml(s.genres.slice(0,3).join(' · '))}${s.runtime ? ' · ' + s.runtime + ' min' : ''}</div>` : '';
+  const syncBtn = s.tmdbId ? `<button class="btn btn-ghost" onclick="syncSeries('${s.id}')">🔄 Actualizar</button>` : '';
 
-  return `
-    <div class="ticket">
-      <div class="ticket-head">
-        <div class="ticket-head-left">
-          ${posterHtml}
-          <div>
-            <p class="ticket-title">${escapeHtml(s.title)}</p>
-            ${genresHtml}
-            ${statusHtml}
+  view.innerHTML = `
+    <button class="detail-back" onclick="closeDetail()">← Volver a mis series</button>
+    <div class="detail-hero">
+      ${backdropHtml}
+      <div class="detail-hero-inner">
+        ${posterHtml}
+        <div class="detail-info">
+          <p class="detail-title">${escapeHtml(s.title)}</p>
+          ${genresHtml}
+          <span class="status-badge ${status}"><span class="dot"></span>${statusText}</span>
+          ${total ? `<div class="progress-track" style="margin:10px 0 0;"><div class="progress-fill" style="width:${pct}%"></div></div>` : ''}
+          <div class="detail-actions">
+            ${syncBtn}
+            <button class="btn btn-ghost" onclick="removeSeries('${s.id}')">🗑 Eliminar</button>
           </div>
         </div>
-        <div class="ticket-actions">
-          ${syncBtn}
-          <button class="icon-btn" onclick="removeSeries('${s.id}')" title="Eliminar serie">✕</button>
-        </div>
       </div>
-      ${total ? `<div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>` : ''}
-      <div class="seasons">${seasonsTabsHtml}</div>
-      <div class="episodes">${episodesHtml}</div>
-      ${seasonRemoveHtml}
     </div>
+    <div class="seasons">${seasonsTabsHtml}</div>
+    <div class="season-actions" id="seasonActions"></div>
+    <div id="episodeListContainer"><div class="ep-loading">Cargando episodios...</div></div>
   `;
+
+  renderEpisodeList(s, activeSeason);
 }
-function setActiveSeason(seriesId, num){ activeSeasonBySeries[seriesId] = num; render(); }
+
+async function renderEpisodeList(s, seasonNumber){
+  const cont = document.getElementById('episodeListContainer');
+  const actions = document.getElementById('seasonActions');
+  if(!cont) return;
+
+  const season = s.seasons.find(se => se.number === seasonNumber);
+  if(!season){
+    cont.innerHTML = `<div class="empty"><strong>Sin temporadas</strong>Agrega una con "+ temporada".</div>`;
+    if(actions) actions.innerHTML = '';
+    return;
+  }
+
+  const allWatched = season.watched.every(Boolean);
+  if(actions){
+    actions.innerHTML = `
+      <button class="btn btn-ghost" onclick="toggleWholeSeason('${s.id}', ${seasonNumber})">
+        ${allWatched ? '✕ Desmarcar temporada' : '✓ Marcar toda la temporada'}
+      </button>
+      <button class="btn btn-ghost" onclick="removeSeason('${s.id}', ${seasonNumber})">🗑 Eliminar T${seasonNumber}</button>
+    `;
+  }
+
+  // intenta traer nombres/fechas reales desde TMDB (cacheado)
+  const eps = s.tmdbId ? await fetchSeasonEpisodes(s.tmdbId, seasonNumber) : null;
+
+  // si el usuario cambió de temporada mientras cargaba, no pisar
+  if(openSeriesId !== s.id || activeSeasonBySeries[s.id] !== seasonNumber) return;
+
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  cont.innerHTML = `<div class="ep-list">` + season.watched.map((w, i) => {
+    const num = i + 1;
+    const info = eps ? eps.find(e => e.n === num) : null;
+    const name = info && info.name ? info.name : `Episodio ${num}`;
+
+    let dateHtml = '';
+    if(info && info.air_date){
+      const d = new Date(info.air_date + 'T00:00:00');
+      const isFuture = d > today;
+      const label = d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' });
+      dateHtml = `<div class="ep-date ${isFuture ? 'future' : ''}">${isFuture ? 'Se estrena el ' : ''}${label}</div>`;
+    }
+
+    return `<div class="ep-row ${w ? 'watched' : ''}" onclick="toggleEpisode('${s.id}', ${seasonNumber}, ${i})">
+      <div class="ep-check">✓</div>
+      <div class="ep-num">${seasonNumber}x${String(num).padStart(2,'0')}</div>
+      <div class="ep-meta">
+        <div class="ep-name">${escapeHtml(name)}</div>
+        ${dateHtml}
+      </div>
+    </div>`;
+  }).join('') + `</div>`;
+}
+
+function toggleWholeSeason(seriesId, seasonNumber){
+  const s = seriesList.find(x => x.id === seriesId);
+  const se = s.seasons.find(x => x.number === seasonNumber);
+  const allWatched = se.watched.every(Boolean);
+  se.watched = se.watched.map(() => !allWatched);
+  saveData();
+  render();
+}
+
+function setActiveSeason(seriesId, num){
+  activeSeasonBySeries[seriesId] = num;
+  render();
+}
 
 // ---------------- autocomplete ----------------
 let acTimer = null, acLastQuery = '';
@@ -1540,14 +1856,7 @@ function renderDashboard(){
 
 function goToSeries(seriesId){
   switchTab('series');
-  currentFilter = 'todas';
-  document.getElementById('searchInput').value = '';
-  render();
-  setTimeout(() => {
-    const tickets = document.querySelectorAll('#seriesContainer .ticket');
-    const target = Array.from(tickets).find(t => t.innerHTML.includes(`'${seriesId}'`));
-    if(target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, 60);
+  openDetail(seriesId);
 }
 
 // ---------------- init ----------------
