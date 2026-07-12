@@ -1,6 +1,6 @@
 // Service worker: cachea el "cascarón" de la app para que abra offline.
 // Los datos viven en localStorage (no acá), y las llamadas a TMDB siempre van a la red.
-const CACHE_NAME = 'bitacora-series-v1';
+const CACHE_NAME = 'bitacora-series-v2';
 const APP_SHELL = [
   './',
   './index.html',
@@ -28,8 +28,8 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // TMDB (búsqueda, detalles, imágenes): siempre red, nunca cache.
-  if (url.hostname.includes('themoviedb.org')) {
+  // Cualquier request a otro origen (TMDB, Supabase, etc.): siempre red, nunca cache.
+  if (url.origin !== self.location.origin) {
     return;
   }
 
