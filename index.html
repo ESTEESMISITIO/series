@@ -14,6 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --bg:#121217;
@@ -222,7 +223,67 @@
       <p class="sub" id="pageSub">Buscá series reales, marcá episodios y no perdás nunca en cuál vas.</p>
     </div>
     <button class="gear-btn" id="gearBtn" title="Configurar API key">⚙</button>
+    <button class="gear-btn" id="cloudBtn" title="Sincronizar entre dispositivos">☁</button>
   </header>
+
+  <div class="key-panel" id="syncPanel">
+    <div id="syncSetupBlock">
+      <p>
+        Para sincronizar tus series entre dispositivos necesitás un proyecto gratuito de
+        <a href="https://supabase.com" target="_blank" rel="noopener">Supabase</a>.
+        Creá uno, y en <strong>Project Settings → API</strong> copiá la <strong>Project URL</strong> y la <strong>anon public key</strong>.
+        Después, en el <strong>SQL Editor</strong> del proyecto, pegá y ejecutá esto una vez:
+      </p>
+      <pre style="background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:11px;overflow-x:auto;color:var(--text);">create table public.bitacora (
+  user_id uuid references auth.users on delete cascade primary key,
+  data jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+alter table public.bitacora enable row level security;
+create policy "select own" on public.bitacora for select using (auth.uid() = user_id);
+create policy "insert own" on public.bitacora for insert with check (auth.uid() = user_id);
+create policy "update own" on public.bitacora for update using (auth.uid() = user_id);</pre>
+      <p>Además, en <strong>Authentication → Providers → Email</strong>, desactivá "Confirm email" para no depender de correos de verificación en un uso personal.</p>
+      <div class="key-row">
+        <input id="supaUrlInput" type="text" placeholder="Project URL (https://xxxx.supabase.co)">
+      </div>
+      <div class="key-row" style="margin-top:8px;">
+        <input id="supaKeyInput" type="text" placeholder="anon public key">
+        <button class="btn btn-primary btn-sm" id="saveSupaBtn">Guardar</button>
+      </div>
+    </div>
+
+    <div id="syncAuthBlock" style="display:none;">
+      <div id="authLoggedOut">
+        <p>Iniciá sesión (o creá una cuenta) para sincronizar. Usá el mismo email/contraseña en todos tus dispositivos.</p>
+        <div class="key-row">
+          <input id="authEmail" type="email" placeholder="tu@email.com">
+        </div>
+        <div class="key-row" style="margin-top:8px;">
+          <input id="authPassword" type="password" placeholder="Contraseña">
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button class="btn btn-primary btn-sm" id="signInBtn">Iniciar sesión</button>
+          <button class="btn btn-ghost btn-sm" id="signUpBtn">Crear cuenta</button>
+        </div>
+      </div>
+      <div id="authLoggedIn" style="display:none;">
+        <p id="loggedInAs" style="color:var(--teal);"></p>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary btn-sm" id="syncNowBtn">🔄 Sincronizar ahora</button>
+          <button class="btn btn-ghost btn-sm" id="signOutBtn">Cerrar sesión</button>
+        </div>
+        <div id="conflictChoice" style="display:none;margin-top:10px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px;">
+          <p style="margin:0 0 8px;font-size:12px;">Encontré datos guardados en la nube distintos a los de este dispositivo. ¿Cuáles usamos?</p>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-primary btn-sm" id="useCloudBtn">Usar los de la nube</button>
+            <button class="btn btn-ghost btn-sm" id="useLocalBtn">Usar los de este dispositivo</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="key-status" id="syncStatus"></div>
+  </div>
 
   <div class="key-panel" id="keyPanel">
     <p>
@@ -342,7 +403,10 @@ function loadData(){
   }catch(e){ seriesList = []; }
   render();
 }
-function saveData(){ localStorage.setItem(DATA_KEY, JSON.stringify(seriesList)); }
+function saveData(sync = true){
+  localStorage.setItem(DATA_KEY, JSON.stringify(seriesList));
+  if(sync) scheduleCloudPush();
+}
 function uid(){ return Math.random().toString(36).slice(2,10); }
 function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1032,10 +1096,163 @@ if('serviceWorker' in navigator){
   });
 }
 
+// ---------------- Sincronización en la nube (Supabase) ----------------
+const SUPA_URL_KEY = 'supabase_url';
+const SUPA_ANON_KEY = 'supabase_anon_key';
+let supaUrl = localStorage.getItem(SUPA_URL_KEY) || '';
+let supaAnon = localStorage.getItem(SUPA_ANON_KEY) || '';
+let supabaseClient = null;
+let currentSession = null;
+let pushTimer = null;
+
+function setSyncStatus(msg, ok){
+  const el = document.getElementById('syncStatus');
+  el.textContent = msg;
+  el.className = 'key-status ' + (ok ? 'ok' : 'missing');
+}
+
+function initSupabaseClient(){
+  if(supaUrl && supaAnon && window.supabase){
+    supabaseClient = window.supabase.createClient(supaUrl, supaAnon);
+    return true;
+  }
+  return false;
+}
+
+function refreshSyncUI(){
+  const configured = !!(supaUrl && supaAnon);
+  document.getElementById('syncSetupBlock').style.display = configured ? 'none' : 'block';
+  document.getElementById('syncAuthBlock').style.display = configured ? 'block' : 'none';
+  if(!configured){ setSyncStatus('Todavía sin configurar.', false); return; }
+
+  if(currentSession){
+    document.getElementById('authLoggedOut').style.display = 'none';
+    document.getElementById('authLoggedIn').style.display = 'block';
+    document.getElementById('loggedInAs').textContent = `Conectado como ${currentSession.user.email}`;
+    setSyncStatus('Sincronización activa ✓', true);
+  } else {
+    document.getElementById('authLoggedOut').style.display = 'block';
+    document.getElementById('authLoggedIn').style.display = 'none';
+    setSyncStatus('Configurado, pero no iniciaste sesión todavía.', false);
+  }
+}
+
+document.getElementById('cloudBtn').addEventListener('click', () => {
+  document.getElementById('syncPanel').classList.toggle('open');
+});
+document.getElementById('saveSupaBtn').addEventListener('click', () => {
+  const url = document.getElementById('supaUrlInput').value.trim().replace(/\/$/, '');
+  const key = document.getElementById('supaKeyInput').value.trim();
+  if(!url || !key){ alert('Completá los dos campos.'); return; }
+  supaUrl = url; supaAnon = key;
+  localStorage.setItem(SUPA_URL_KEY, supaUrl);
+  localStorage.setItem(SUPA_ANON_KEY, supaAnon);
+  if(initSupabaseClient()){
+    refreshSyncUI();
+    restoreSession();
+  } else {
+    alert('No se pudo inicializar Supabase. Revisá la URL y la key.');
+  }
+});
+
+async function restoreSession(){
+  if(!supabaseClient) return;
+  const { data } = await supabaseClient.auth.getSession();
+  currentSession = data.session || null;
+  refreshSyncUI();
+  if(currentSession) await handlePostLoginSync();
+}
+
+document.getElementById('signUpBtn').addEventListener('click', async () => {
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  if(!email || !password){ alert('Completá email y contraseña.'); return; }
+  const { data, error } = await supabaseClient.auth.signUp({ email, password });
+  if(error){ alert('Error creando cuenta: ' + error.message); return; }
+  currentSession = data.session || null;
+  refreshSyncUI();
+  if(currentSession) await handlePostLoginSync();
+  else alert('Cuenta creada. Si tu proyecto pide confirmación por email, confirmá y después iniciá sesión.');
+});
+document.getElementById('signInBtn').addEventListener('click', async () => {
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  if(!email || !password){ alert('Completá email y contraseña.'); return; }
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if(error){ alert('Error iniciando sesión: ' + error.message); return; }
+  currentSession = data.session;
+  refreshSyncUI();
+  await handlePostLoginSync();
+});
+document.getElementById('signOutBtn').addEventListener('click', async () => {
+  await supabaseClient.auth.signOut();
+  currentSession = null;
+  refreshSyncUI();
+});
+
+async function fetchCloudData(){
+  const { data, error } = await supabaseClient
+    .from('bitacora')
+    .select('data')
+    .eq('user_id', currentSession.user.id)
+    .maybeSingle();
+  if(error){ console.warn('Error leyendo la nube', error); return null; }
+  return data ? data.data : null;
+}
+async function pushToCloud(){
+  if(!supabaseClient || !currentSession) return;
+  const { error } = await supabaseClient
+    .from('bitacora')
+    .upsert({ user_id: currentSession.user.id, data: seriesList, updated_at: new Date().toISOString() });
+  if(error) console.warn('Error subiendo a la nube', error);
+  else setSyncStatus(`Sincronizado ✓ (${new Date().toLocaleTimeString('es-ES')})`, true);
+}
+function scheduleCloudPush(){
+  if(!currentSession) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(pushToCloud, 1200);
+}
+
+async function handlePostLoginSync(){
+  const cloudData = await fetchCloudData();
+  const localHasData = seriesList.length > 0;
+  const cloudHasData = Array.isArray(cloudData) && cloudData.length > 0;
+
+  if(cloudHasData && localHasData && JSON.stringify(cloudData) !== JSON.stringify(seriesList)){
+    // conflicto real: dejamos que el usuario elija
+    document.getElementById('conflictChoice').style.display = 'block';
+    document.getElementById('conflictChoice').dataset.cloud = JSON.stringify(cloudData);
+  } else if(cloudHasData && !localHasData){
+    seriesList = cloudData;
+    saveData(false);
+    render();
+    setSyncStatus('Traje tus series desde la nube ✓', true);
+  } else if(!cloudHasData){
+    await pushToCloud();
+  } else {
+    setSyncStatus('Ya estaba todo sincronizado ✓', true);
+  }
+}
+document.getElementById('useCloudBtn').addEventListener('click', () => {
+  const box = document.getElementById('conflictChoice');
+  seriesList = JSON.parse(box.dataset.cloud);
+  saveData(false);
+  render();
+  box.style.display = 'none';
+  setSyncStatus('Usando los datos de la nube ✓', true);
+});
+document.getElementById('useLocalBtn').addEventListener('click', async () => {
+  document.getElementById('conflictChoice').style.display = 'none';
+  await pushToCloud();
+});
+document.getElementById('syncNowBtn').addEventListener('click', pushToCloud);
+
 // ---------------- init ----------------
 refreshKeyStatus();
 if(!apiKey) document.getElementById('keyPanel').classList.add('open');
 loadData();
+if(initSupabaseClient()) restoreSession();
+refreshSyncUI();
 </script>
 </body>
 </html>
