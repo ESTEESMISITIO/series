@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bitácora de Series</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#121217;
+    --bg-soft:#181820;
+    --card:#1c1c26;
+    --line:#2b2b36;
+    --gold:#e8a33d;
+    --gold-soft:#e8a33d33;
+    --teal:#4fc3bd;
+    --violet:#a78bfa;
+    --text:#ece9e2;
+    --muted:#8d8d99;
+    --danger:#d9694f;
+    --nav-h:64px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 15% 0%, #1c1c2c 0%, var(--bg) 45%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+    min-height:100vh;
+    padding:24px 20px calc(var(--nav-h) + 30px);
+  }
+  .wrap{max-width:780px;margin:0 auto;}
+  a{color:var(--teal);}
+
+  header{margin-bottom:18px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);margin:0 0 6px;}
+  h1{font-family:'Bricolage Grotesque',serif;font-size:clamp(26px,5vw,36px);font-weight:700;margin:0 0 6px;letter-spacing:-.01em;}
+  .sub{color:var(--muted);font-size:14px;margin:0;}
+  .gear-btn{
+    background:var(--bg-soft);border:1px solid var(--line);color:var(--muted);
+    border-radius:10px;width:40px;height:40px;flex-shrink:0;cursor:pointer;font-size:18px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .gear-btn:hover{border-color:var(--gold);color:var(--gold);}
+
+  .key-panel{background:var(--bg-soft);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:20px;display:none;}
+  .key-panel.open{display:block;}
+  .key-panel p{margin:0 0 10px;font-size:13px;color:var(--muted);line-height:1.5;}
+  .key-row{display:flex;gap:8px;flex-wrap:wrap;}
+  .key-row input{flex:1 1 220px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;outline:none;}
+  .key-row input:focus{border-color:var(--gold);}
+  .key-status{font-size:12px;margin-top:8px;font-family:'JetBrains Mono',monospace;}
+  .key-status.ok{color:var(--teal);}
+  .key-status.missing{color:var(--gold);}
+
+  .btn{border:none;border-radius:10px;padding:12px 18px;font-family:inherit;font-weight:600;font-size:14px;cursor:pointer;transition:transform .1s, opacity .15s;}
+  .btn:active{transform:scale(.97);}
+  .btn-primary{background:var(--gold);color:#1a1204;}
+  .btn-primary:hover{opacity:.92;}
+  .btn-ghost{background:var(--bg-soft);color:var(--text);border:1px solid var(--line);}
+  .btn-ghost:hover{border-color:var(--teal);}
+  .btn-sm{padding:8px 12px;font-size:12px;}
+
+  /* ---- tab sections ---- */
+  .tab-section{display:none;}
+  .tab-section.active{display:block;}
+
+  /* ---- Mis Series tab ---- */
+  .toolbar{display:flex;gap:10px;margin:8px 0 14px;flex-wrap:wrap;}
+  .search-box{flex:1 1 220px;position:relative;}
+  .search-box input{width:100%;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;padding:12px 14px 12px 38px;color:var(--text);font-size:14px;font-family:inherit;outline:none;}
+  .search-box input:focus{border-color:var(--teal);}
+  .search-box::before{content:"⌕";position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:16px;}
+
+  .stats-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  .stat-chip{flex:1 1 120px;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;padding:10px 14px;}
+  .stat-num{font-family:'Bricolage Grotesque',serif;font-size:22px;font-weight:700;line-height:1;}
+  .stat-num.gold{color:var(--gold);} .stat-num.teal{color:var(--teal);} .stat-num.violet{color:var(--violet);}
+  .stat-label{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-top:2px;}
+
+  .filter-row{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap;}
+  .filter-chip{font-family:'JetBrains Mono',monospace;font-size:12px;padding:7px 12px;border-radius:20px;background:var(--bg-soft);color:var(--muted);border:1px solid var(--line);cursor:pointer;display:flex;align-items:center;gap:6px;}
+  .filter-chip .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+  .filter-chip.active{color:var(--text);border-color:var(--text);background:#ffffff0d;}
+  .filter-chip[data-status="viendo"].active{color:var(--teal);border-color:var(--teal);background:#4fc3bd1a;}
+  .filter-chip[data-status="pendiente"].active{color:var(--gold);border-color:var(--gold);background:var(--gold-soft);}
+  .filter-chip[data-status="completada"].active{color:var(--violet);border-color:var(--violet);background:#a78bfa1a;}
+
+  .add-form{display:none;background:var(--bg-soft);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:20px;gap:10px;flex-wrap:wrap;}
+  .add-form.open{display:flex;}
+  .add-form input{width:100%;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--text);font-family:inherit;font-size:14px;outline:none;}
+  .add-form input:focus{border-color:var(--gold);}
+  .autocomplete-wrap{position:relative;flex:1 1 200px;}
+
+  .suggestions{display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;z-index:20;max-height:320px;overflow-y:auto;box-shadow:0 12px 24px -8px #00000066;}
+  .suggestions.open{display:block;}
+  .sugg-status{padding:10px 12px;font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+  .sugg-item{padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-top:1px solid var(--line);}
+  .sugg-item:first-child{border-top:none;}
+  .sugg-item:hover{background:var(--bg-soft);}
+  .sugg-poster{width:32px;height:48px;border-radius:4px;object-fit:cover;background:var(--bg-soft);flex-shrink:0;}
+  .sugg-text{flex:1;min-width:0;}
+  .sugg-title{font-size:14px;color:var(--text);display:block;}
+  .sugg-meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);}
+
+  .empty{text-align:center;padding:60px 20px;color:var(--muted);border:1px dashed var(--line);border-radius:14px;}
+  .empty strong{color:var(--text);display:block;margin-bottom:6px;font-size:16px;}
+
+  .ticket{position:relative;background:var(--card);border-radius:14px;margin-bottom:18px;padding:20px 20px 18px 30px;border:1px solid var(--line);overflow:hidden;}
+  .ticket::before{content:"";position:absolute;left:0;top:0;bottom:0;width:14px;background-image: radial-gradient(circle at 0 12px, var(--bg) 6px, transparent 6.5px);background-repeat:repeat-y;background-size:14px 24px;background-position:-4px 0;}
+  .ticket-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px;}
+  .ticket-head-left{display:flex;gap:12px;}
+  .ticket-poster{width:44px;height:64px;border-radius:6px;object-fit:cover;background:var(--bg-soft);flex-shrink:0;}
+  .ticket-title{font-family:'Bricolage Grotesque',serif;font-size:20px;font-weight:700;margin:0;}
+  .ticket-genres{font-size:11px;color:var(--muted);margin-top:2px;}
+  .ticket-actions{display:flex;gap:4px;flex-shrink:0;}
+  .icon-btn{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:4px 6px;border-radius:6px;}
+  .icon-btn:hover{color:var(--danger);background:#d9694f14;}
+  .icon-btn.sync:hover{color:var(--teal);background:#4fc3bd14;}
+
+  .status-badge{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 9px;border-radius:20px;margin-top:4px;}
+  .status-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+  .status-badge.viendo{color:var(--teal);background:#4fc3bd1a;}
+  .status-badge.pendiente{color:var(--gold);background:var(--gold-soft);}
+  .status-badge.completada{color:var(--violet);background:#a78bfa1a;}
+  .status-badge.sindatos{color:var(--muted);background:#8d8d991a;}
+
+  .progress-track{height:6px;background:var(--bg-soft);border-radius:4px;overflow:hidden;margin:10px 0 16px;}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--gold),#f3c169);border-radius:4px;transition:width .25s;}
+
+  .seasons{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+  .season-tab{font-family:'JetBrains Mono',monospace;font-size:12px;padding:6px 10px;border-radius:7px;background:var(--bg-soft);color:var(--muted);border:1px solid var(--line);cursor:pointer;}
+  .season-tab.active{background:var(--gold-soft);color:var(--gold);border-color:var(--gold);}
+  .season-tab.add{color:var(--teal);border-style:dashed;}
+
+  .episodes{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:6px;}
+  .ep{aspect-ratio:1;border-radius:8px;background:var(--bg-soft);border:1px solid var(--line);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;transition:background .12s, color .12s, border-color .12s;}
+  .ep:hover{border-color:var(--gold);}
+  .ep.watched{background:var(--gold);color:#1a1204;border-color:var(--gold);font-weight:600;}
+
+  .season-remove{margin-top:10px;font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline;}
+  .season-remove:hover{color:var(--danger);}
+
+  /* ---- Calendar tab ---- */
+  .cal-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px;flex-wrap:wrap;}
+  .cal-group-label{font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:20px 0 8px;}
+  .cal-group-label:first-of-type{margin-top:0;}
+  .cal-item{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px;}
+  .cal-poster{width:38px;height:56px;border-radius:5px;object-fit:cover;background:var(--bg-soft);flex-shrink:0;}
+  .cal-info{flex:1;min-width:0;}
+  .cal-title{font-size:14px;font-weight:600;}
+  .cal-ep{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px;}
+  .cal-date{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--gold);white-space:nowrap;}
+
+  /* ---- Discover tab ---- */
+  .discover-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px;}
+  .discover-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:14px;}
+  .disc-card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;position:relative;}
+  .disc-poster{width:100%;aspect-ratio:2/3;object-fit:cover;background:var(--bg-soft);display:block;}
+  .disc-body{padding:8px 10px 10px;}
+  .disc-title{font-size:12.5px;font-weight:600;line-height:1.25;margin:0 0 2px;}
+  .disc-meta{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
+  .disc-add{
+    position:absolute;top:8px;right:8px;
+    width:28px;height:28px;border-radius:50%;
+    background:var(--gold);color:#1a1204;border:none;
+    font-size:16px;font-weight:700;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .disc-add.added{background:var(--violet);color:#fff;font-size:13px;}
+
+  /* ---- Stats tab ---- */
+  .stat-block{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px;}
+  .stat-block h3{font-family:'Bricolage Grotesque',serif;font-size:15px;margin:0 0 14px;}
+  .big-stat-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px;}
+  .big-stat{flex:1 1 140px;text-align:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 10px;}
+  .big-stat .num{font-family:'Bricolage Grotesque',serif;font-size:28px;font-weight:700;}
+  .big-stat .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-top:4px;}
+  .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .bar-label{width:110px;flex-shrink:0;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .bar-track{flex:1;height:10px;background:var(--bg-soft);border-radius:5px;overflow:hidden;}
+  .bar-fill{height:100%;background:linear-gradient(90deg,var(--teal),var(--gold));border-radius:5px;}
+  .bar-val{width:32px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);flex-shrink:0;}
+
+  footer{text-align:center;color:var(--muted);font-size:12px;margin-top:20px;font-family:'JetBrains Mono',monospace;}
+
+  /* ---- bottom nav ---- */
+  .bottom-nav{
+    position:fixed;bottom:0;left:0;right:0;
+    height:var(--nav-h);
+    background:var(--bg-soft);
+    border-top:1px solid var(--line);
+    display:flex;
+    z-index:50;
+  }
+  .nav-btn{
+    flex:1;background:none;border:none;color:var(--muted);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    cursor:pointer;font-family:'Inter',sans-serif;font-size:10.5px;
+  }
+  .nav-btn .nav-icon{font-size:19px;line-height:1;}
+  .nav-btn.active{color:var(--gold);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <p class="eyebrow">// registro personal</p>
+      <h1>Mi bitácora de series</h1>
+      <p class="sub" id="pageSub">Buscá series reales, marcá episodios y no perdás nunca en cuál vas.</p>
+    </div>
+    <button class="gear-btn" id="gearBtn" title="Configurar API key">⚙</button>
+  </header>
+
+  <div class="key-panel" id="keyPanel">
+    <p>
+      Necesitás una API key gratuita de TMDB. Sacala en
+      <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">themoviedb.org/settings/api</a>
+      (cuenta gratis, pedís una "API Key" tipo v3, es inmediato) y pegala aquí. Se guarda solo en tu navegador.
+    </p>
+    <div class="key-row">
+      <input id="apiKeyInput" type="text" placeholder="Pegá tu TMDB API key (v3)">
+      <button class="btn btn-primary btn-sm" id="saveKeyBtn">Guardar</button>
+    </div>
+    <div class="key-status" id="keyStatus"></div>
+  </div>
+
+  <!-- ===== TAB: MIS SERIES ===== -->
+  <section class="tab-section active" id="tab-series">
+    <div class="toolbar">
+      <div class="search-box"><input id="searchInput" type="text" placeholder="Buscar en mis series..."></div>
+      <button class="btn btn-primary" id="toggleAddBtn">+ Agregar serie</button>
+      <button class="btn btn-ghost" id="toggleImportBtn">⬆ Importar historial</button>
+    </div>
+
+    <div class="add-form" id="importPanel">
+      <div style="width:100%;">
+        <p class="sub" style="margin-bottom:10px;">
+          Subí el CSV exportado de TV Time (columnas: title, season, episode, watched_at, etc.).
+          Voy a buscar cada serie en TMDB y marcar los episodios que ya viste.
+        </p>
+        <input type="file" id="importFileInput" accept=".csv,text/csv" style="margin-bottom:10px;">
+        <div id="importLog" style="display:none;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);max-height:200px;overflow-y:auto;margin-bottom:10px;"></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary btn-sm" id="startImportBtn">Iniciar importación</button>
+          <button class="btn btn-ghost btn-sm" id="cancelImportBtn">Cerrar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="add-form" id="addForm">
+      <div class="autocomplete-wrap">
+        <input id="newSeriesTitle" type="text" placeholder="Escribí el título de la serie" maxlength="80" autocomplete="off">
+        <div class="suggestions" id="suggestions"></div>
+      </div>
+      <button class="btn btn-ghost" id="manualAddBtn">Agregar manual</button>
+      <button class="btn btn-ghost" id="cancelAddBtn">Cancelar</button>
+    </div>
+
+    <div class="stats-bar" id="statsBar"></div>
+    <div class="filter-row" id="filterRow"></div>
+    <div id="seriesContainer"></div>
+  </section>
+
+  <!-- ===== TAB: CALENDARIO ===== -->
+  <section class="tab-section" id="tab-calendar">
+    <div class="cal-toolbar">
+      <span class="sub">Próximos estrenos de tus series</span>
+      <button class="btn btn-ghost btn-sm" id="refreshCalBtn">🔄 Actualizar</button>
+    </div>
+    <div id="calendarContainer"></div>
+  </section>
+
+  <!-- ===== TAB: DESCUBRIR ===== -->
+  <section class="tab-section" id="tab-discover">
+    <div class="discover-toolbar">
+      <span class="sub">Tendencias de la semana en TMDB</span>
+      <button class="btn btn-ghost btn-sm" id="refreshDiscoverBtn">🔄 Actualizar</button>
+    </div>
+    <div class="discover-grid" id="discoverContainer"></div>
+  </section>
+
+  <!-- ===== TAB: ESTADÍSTICAS ===== -->
+  <section class="tab-section" id="tab-stats">
+    <div class="big-stat-row" id="bigStatsRow"></div>
+    <div class="stat-block">
+      <h3>Géneros favoritos</h3>
+      <div id="genreBars"></div>
+    </div>
+    <div class="stat-block">
+      <h3>Series por estado</h3>
+      <div id="statusBars"></div>
+    </div>
+  </section>
+
+  <footer>los datos y tu API key se guardan solo en este navegador — nada se envía a ningún servidor propio</footer>
+</div>
+
+<nav class="bottom-nav">
+  <button class="nav-btn active" data-tab="series" onclick="switchTab('series')"><span class="nav-icon">📚</span>Mis series</button>
+  <button class="nav-btn" data-tab="calendar" onclick="switchTab('calendar')"><span class="nav-icon">📅</span>Calendario</button>
+  <button class="nav-btn" data-tab="discover" onclick="switchTab('discover')"><span class="nav-icon">🧭</span>Descubrir</button>
+  <button class="nav-btn" data-tab="stats" onclick="switchTab('stats')"><span class="nav-icon">📊</span>Estadísticas</button>
+</nav>
+
+<script>
+const DATA_KEY = 'series-tracker-data';
+const APIKEY_KEY = 'tmdb_api_key';
+let seriesList = [];
+let activeSeasonBySeries = {};
+let apiKey = localStorage.getItem(APIKEY_KEY) || '';
+let currentFilter = 'todas';
+let discoverCache = null;
+
+const TMDB_BASE = 'https://api.themoviedb.org/3';
+const TMDB_IMG = 'https://image.tmdb.org/t/p/w154';
+const TMDB_IMG_SM = 'https://image.tmdb.org/t/p/w92';
+
+const PAGE_SUBS = {
+  series: 'Buscá series reales, marcá episodios y no perdás nunca en cuál vas.',
+  calendar: 'Cuándo sale el próximo capítulo de lo que estás viendo.',
+  discover: 'Series populares para sumar a tu bitácora.',
+  stats: 'Un vistazo a todo lo que viste.'
+};
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(DATA_KEY);
+    seriesList = raw ? JSON.parse(raw) : [];
+  }catch(e){ seriesList = []; }
+  render();
+}
+function saveData(){ localStorage.setItem(DATA_KEY, JSON.stringify(seriesList)); }
+function uid(){ return Math.random().toString(36).slice(2,10); }
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function tmdbAuthed(url){
+  const isV4 = apiKey.length > 60;
+  const sep = url.includes('?') ? '&' : '?';
+  return {
+    url: isV4 ? url : `${url}${sep}api_key=${encodeURIComponent(apiKey)}`,
+    opts: isV4 ? { headers: { Authorization: `Bearer ${apiKey}` } } : {}
+  };
+}
+
+// ---------------- tabs ----------------
+function switchTab(name){
+  document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.querySelector(`.nav-btn[data-tab="${name}"]`).classList.add('active');
+  document.getElementById('pageSub').textContent = PAGE_SUBS[name];
+  window.scrollTo({ top: 0, behavior: 'instant' });
+  if(name === 'calendar') renderCalendar();
+  if(name === 'discover' && !discoverCache) loadDiscover();
+  if(name === 'stats') renderStats2();
+}
+
+// ---------------- API key panel ----------------
+function refreshKeyStatus(){
+  const el = document.getElementById('keyStatus');
+  if(apiKey){
+    el.textContent = 'Key guardada ✓ — el buscador ya funciona.';
+    el.className = 'key-status ok';
+  } else {
+    el.textContent = 'Sin key todavía: podés agregar series a mano, pero buscador, calendario y descubrir no van a funcionar hasta que pegues una.';
+    el.className = 'key-status missing';
+  }
+}
+document.getElementById('gearBtn').addEventListener('click', () => {
+  document.getElementById('keyPanel').classList.toggle('open');
+});
+document.getElementById('saveKeyBtn').addEventListener('click', () => {
+  const v = document.getElementById('apiKeyInput').value.trim().replace(/^["']|["']$/g, '');
+  if(v){
+    apiKey = v;
+    localStorage.setItem(APIKEY_KEY, apiKey);
+    refreshKeyStatus();
+  }
+});
+
+// ---------------- TMDB calls ----------------
+async function tmdbSearchShows(query){
+  if(!apiKey) return { error: 'no-key' };
+  const { url, opts } = tmdbAuthed(`${TMDB_BASE}/search/tv?query=${encodeURIComponent(query)}&language=es-ES&include_adult=false`);
+  const res = await fetch(url, opts);
+  if(!res.ok) return { error: res.status === 401 ? 'bad-key' : 'http-' + res.status };
+  const data = await res.json();
+  return { results: (data.results || []).slice(0, 8) };
+}
+async function tmdbGetShowDetails(id){
+  const { url, opts } = tmdbAuthed(`${TMDB_BASE}/tv/${id}?language=es-ES`);
+  const res = await fetch(url, opts);
+  if(!res.ok) return null;
+  return await res.json();
+}
+async function tmdbGetTrending(){
+  if(!apiKey) return { error: 'no-key' };
+  const { url, opts } = tmdbAuthed(`${TMDB_BASE}/trending/tv/week?language=es-ES`);
+  const res = await fetch(url, opts);
+  if(!res.ok) return { error: res.status === 401 ? 'bad-key' : 'http-' + res.status };
+  const data = await res.json();
+  return { results: data.results || [] };
+}
+
+// ---------------- series data helpers ----------------
+function extractMeta(details){
+  return {
+    poster: details.poster_path ? TMDB_IMG + details.poster_path : null,
+    genres: (details.genres || []).map(g => g.name),
+    runtime: (details.episode_run_time && details.episode_run_time.length) ? details.episode_run_time[0] : null,
+    nextEpisode: details.next_episode_to_air ? {
+      air_date: details.next_episode_to_air.air_date,
+      season_number: details.next_episode_to_air.season_number,
+      episode_number: details.next_episode_to_air.episode_number,
+      name: details.next_episode_to_air.name
+    } : null,
+    tmdbStatus: details.status || ''
+  };
+}
+
+function addSeriesFromTMDB(details){
+  const seasons = (details.seasons || [])
+    .filter(se => se.season_number > 0 && se.episode_count > 0)
+    .map(se => ({ number: se.season_number, watched: new Array(se.episode_count).fill(false) }));
+  const meta = extractMeta(details);
+  const s = { id: uid(), title: details.name, tmdbId: details.id, seasons, ...meta };
+  seriesList.push(s);
+  activeSeasonBySeries[s.id] = null;
+  saveData();
+  render();
+}
+function addSeriesManual(title){
+  const s = { id: uid(), title: title.trim(), poster: null, tmdbId: null, seasons: [], genres: [], runtime: null, nextEpisode: null, tmdbStatus: '' };
+  seriesList.push(s);
+  activeSeasonBySeries[s.id] = null;
+  saveData();
+  render();
+}
+async function syncSeries(seriesId){
+  const s = seriesList.find(x => x.id === seriesId);
+  if(!s || !s.tmdbId || !apiKey) return;
+  const details = await tmdbGetShowDetails(s.tmdbId);
+  if(!details) return;
+  Object.assign(s, extractMeta(details));
+  (details.seasons || []).filter(se => se.season_number > 0 && se.episode_count > 0).forEach(se => {
+    const existing = s.seasons.find(x => x.number === se.season_number);
+    if(existing){
+      if(se.episode_count > existing.watched.length){
+        existing.watched = existing.watched.concat(new Array(se.episode_count - existing.watched.length).fill(false));
+      }
+    } else {
+      s.seasons.push({ number: se.season_number, watched: new Array(se.episode_count).fill(false) });
+    }
+  });
+  saveData();
+  render();
+}
+function removeSeries(id){
+  if(!confirm('¿Eliminar esta serie y todo su progreso?')) return;
+  seriesList = seriesList.filter(s => s.id !== id);
+  saveData();
+  render();
+}
+function addSeason(seriesId){
+  const s = seriesList.find(x => x.id === seriesId);
+  const count = prompt('¿Cuántos capítulos tiene esta temporada?', '10');
+  const n = parseInt(count, 10);
+  if(!n || n <= 0) return;
+  const seasonNumber = s.seasons.length ? Math.max(...s.seasons.map(se => se.number)) + 1 : 1;
+  s.seasons.push({ number: seasonNumber, watched: new Array(n).fill(false) });
+  activeSeasonBySeries[seriesId] = seasonNumber;
+  saveData();
+  render();
+}
+function removeSeason(seriesId, seasonNumber){
+  if(!confirm('¿Eliminar esta temporada?')) return;
+  const s = seriesList.find(x => x.id === seriesId);
+  s.seasons = s.seasons.filter(se => se.number !== seasonNumber);
+  if(activeSeasonBySeries[seriesId] === seasonNumber){
+    activeSeasonBySeries[seriesId] = s.seasons.length ? s.seasons[0].number : null;
+  }
+  saveData();
+  render();
+}
+function toggleEpisode(seriesId, seasonNumber, epIndex){
+  const s = seriesList.find(x => x.id === seriesId);
+  const se = s.seasons.find(x => x.number === seasonNumber);
+  se.watched[epIndex] = !se.watched[epIndex];
+  saveData();
+  render();
+}
+function computeProgress(s){
+  let total = 0, watched = 0;
+  s.seasons.forEach(se => { total += se.watched.length; watched += se.watched.filter(Boolean).length; });
+  return { total, watched };
+}
+function computeStatus(s){
+  const { total, watched } = computeProgress(s);
+  if(total === 0) return 'sindatos';
+  if(watched === 0) return 'pendiente';
+  if(watched === total) return 'completada';
+  return 'viendo';
+}
+const STATUS_LABEL = { viendo: 'Viendo', pendiente: 'Pendiente', completada: 'Completada', sindatos: 'Sin capítulos' };
+const STATUS_ORDER = { viendo: 0, pendiente: 1, completada: 2, sindatos: 3 };
+function findNext(s){
+  const sortedSeasons = [...s.seasons].sort((a,b) => a.number - b.number);
+  for(const se of sortedSeasons){
+    for(let i = 0; i < se.watched.length; i++){
+      if(!se.watched[i]) return { season: se.number, episode: i + 1 };
+    }
+  }
+  return null;
+}
+
+// ---------------- render: Mis Series ----------------
+function renderStats(){
+  const totalSeries = seriesList.length;
+  let watchedEpisodes = 0, completed = 0, watching = 0;
+  seriesList.forEach(s => {
+    const { watched } = computeProgress(s);
+    watchedEpisodes += watched;
+    const st = computeStatus(s);
+    if(st === 'completada') completed++;
+    if(st === 'viendo') watching++;
+  });
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat-chip"><div class="stat-num">${totalSeries}</div><div class="stat-label">series</div></div>
+    <div class="stat-chip"><div class="stat-num gold">${watchedEpisodes}</div><div class="stat-label">episodios vistos</div></div>
+    <div class="stat-chip"><div class="stat-num teal">${watching}</div><div class="stat-label">viendo ahora</div></div>
+    <div class="stat-chip"><div class="stat-num violet">${completed}</div><div class="stat-label">completadas</div></div>
+  `;
+}
+function renderFilters(){
+  const counts = { todas: seriesList.length, viendo: 0, pendiente: 0, completada: 0 };
+  seriesList.forEach(s => { const st = computeStatus(s); if(counts[st] !== undefined) counts[st]++; });
+  const chips = [
+    { key: 'todas', label: 'Todas' }, { key: 'viendo', label: 'Viendo' },
+    { key: 'pendiente', label: 'Pendientes' }, { key: 'completada', label: 'Completadas' }
+  ];
+  document.getElementById('filterRow').innerHTML = chips.map(c => `
+    <button class="filter-chip ${currentFilter === c.key ? 'active' : ''}" data-status="${c.key}" onclick="setFilter('${c.key}')">
+      <span class="dot"></span>${c.label} (${counts[c.key] || 0})
+    </button>`).join('');
+}
+function setFilter(key){ currentFilter = key; render(); }
+
+function render(){
+  renderStats();
+  renderFilters();
+  const container = document.getElementById('seriesContainer');
+  const query = document.getElementById('searchInput').value.trim().toLowerCase();
+  let filtered = seriesList.filter(s => s.title.toLowerCase().includes(query));
+  if(currentFilter !== 'todas') filtered = filtered.filter(s => computeStatus(s) === currentFilter);
+  filtered = filtered.slice().sort((a,b) => {
+    const diff = STATUS_ORDER[computeStatus(a)] - STATUS_ORDER[computeStatus(b)];
+    return diff !== 0 ? diff : a.title.localeCompare(b.title);
+  });
+
+  if(seriesList.length === 0){
+    container.innerHTML = `<div class="empty"><strong>Todavía no agregaste ninguna serie</strong>Tocá "+ Agregar serie" para empezar tu bitácora.</div>`;
+    return;
+  }
+  if(filtered.length === 0){
+    container.innerHTML = `<div class="empty"><strong>Sin resultados</strong>No encontré ninguna serie que coincida con eso.</div>`;
+    return;
+  }
+  container.innerHTML = filtered.map(s => renderTicket(s)).join('');
+}
+
+function renderTicket(s){
+  const { total, watched } = computeProgress(s);
+  const pct = total ? Math.round((watched/total)*100) : 0;
+  const next = findNext(s);
+  const status = computeStatus(s);
+
+  let statusText;
+  if(status === 'sindatos') statusText = 'Sin capítulos cargados';
+  else if(status === 'viendo' && next) statusText = `Seguís en T${next.season} · Ep ${next.episode}`;
+  else if(status === 'completada') statusText = `✓ Completa — ${watched}/${total}`;
+  else statusText = `Pendiente · ${total} capítulos`;
+  const statusHtml = `<span class="status-badge ${status}"><span class="dot"></span>${statusText}</span>`;
+
+  if(activeSeasonBySeries[s.id] == null && s.seasons.length){
+    activeSeasonBySeries[s.id] = (next ? next.season : s.seasons[0].number);
+  }
+  const activeSeason = activeSeasonBySeries[s.id];
+  const seasonsTabsHtml = s.seasons.slice().sort((a,b) => a.number - b.number)
+    .map(se => `<button class="season-tab ${se.number === activeSeason ? 'active' : ''}" onclick="setActiveSeason('${s.id}', ${se.number})">T${se.number}</button>`)
+    .join('') + `<button class="season-tab add" onclick="addSeason('${s.id}')">+ temporada</button>`;
+
+  const currentSeason = s.seasons.find(se => se.number === activeSeason);
+  const episodesHtml = currentSeason
+    ? currentSeason.watched.map((w, i) => `<div class="ep ${w ? 'watched' : ''}" onclick="toggleEpisode('${s.id}', ${currentSeason.number}, ${i})" title="Episodio ${i+1}${w ? ' · visto' : ''}">${i+1}</div>`).join('')
+    : '';
+  const seasonRemoveHtml = currentSeason ? `<button class="season-remove" onclick="removeSeason('${s.id}', ${currentSeason.number})">eliminar T${currentSeason.number}</button>` : '';
+  const posterHtml = s.poster ? `<img class="ticket-poster" src="${s.poster}" alt="">` : '';
+  const genresHtml = (s.genres && s.genres.length) ? `<div class="ticket-genres">${escapeHtml(s.genres.slice(0,3).join(' · '))}</div>` : '';
+  const syncBtn = s.tmdbId ? `<button class="icon-btn sync" onclick="syncSeries('${s.id}')" title="Actualizar datos de TMDB">🔄</button>` : '';
+
+  return `
+    <div class="ticket">
+      <div class="ticket-head">
+        <div class="ticket-head-left">
+          ${posterHtml}
+          <div>
+            <p class="ticket-title">${escapeHtml(s.title)}</p>
+            ${genresHtml}
+            ${statusHtml}
+          </div>
+        </div>
+        <div class="ticket-actions">
+          ${syncBtn}
+          <button class="icon-btn" onclick="removeSeries('${s.id}')" title="Eliminar serie">✕</button>
+        </div>
+      </div>
+      ${total ? `<div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>` : ''}
+      <div class="seasons">${seasonsTabsHtml}</div>
+      <div class="episodes">${episodesHtml}</div>
+      ${seasonRemoveHtml}
+    </div>
+  `;
+}
+function setActiveSeason(seriesId, num){ activeSeasonBySeries[seriesId] = num; render(); }
+
+// ---------------- autocomplete ----------------
+let acTimer = null, acLastQuery = '';
+function openSuggestions(html){ const box = document.getElementById('suggestions'); box.innerHTML = html; box.classList.add('open'); }
+function closeSuggestions(){ document.getElementById('suggestions').classList.remove('open'); }
+
+async function onTitleInput(e){
+  const query = e.target.value.trim();
+  clearTimeout(acTimer);
+  if(query.length < 2){ closeSuggestions(); return; }
+  if(!apiKey){ openSuggestions(`<div class="sugg-status">Todavía no pegaste tu TMDB API key (botón ⚙ arriba). Podés escribir el título y usar "Agregar manual".</div>`); return; }
+  openSuggestions(`<div class="sugg-status">Buscando en TMDB...</div>`);
+  acTimer = setTimeout(async () => {
+    acLastQuery = query;
+    const res = await tmdbSearchShows(query);
+    if(query !== acLastQuery) return;
+    if(res.error === 'bad-key'){ openSuggestions(`<div class="sugg-status">La API key no es válida. Revisala en el botón ⚙.</div>`); return; }
+    if(res.error){ openSuggestions(`<div class="sugg-status">No se pudo conectar con TMDB (${escapeHtml(res.error)}). Podés agregar la serie manual.</div>`); return; }
+    if(res.results.length === 0){ openSuggestions(`<div class="sugg-status">Sin coincidencias para "${escapeHtml(query)}". Probá "Agregar manual".</div>`); return; }
+    const html = res.results.map(show => {
+      const year = (show.first_air_date || '').slice(0,4);
+      const poster = show.poster_path ? TMDB_IMG + show.poster_path : '';
+      return `<div class="sugg-item" onmousedown="chooseSuggestion(${show.id})">
+        ${poster ? `<img class="sugg-poster" src="${poster}" alt="">` : `<div class="sugg-poster"></div>`}
+        <div class="sugg-text"><span class="sugg-title">${escapeHtml(show.name)}</span><span class="sugg-meta">${escapeHtml(year)}</span></div>
+      </div>`;
+    }).join('');
+    openSuggestions(html);
+  }, 400);
+}
+async function chooseSuggestion(tmdbId){
+  closeSuggestions();
+  document.getElementById('newSeriesTitle').value = 'Cargando...';
+  const details = await tmdbGetShowDetails(tmdbId);
+  document.getElementById('addForm').classList.remove('open');
+  document.getElementById('newSeriesTitle').value = '';
+  if(details) addSeriesFromTMDB(details);
+  else alert('No se pudo cargar el detalle de la serie. Probá de nuevo.');
+}
+document.getElementById('newSeriesTitle').addEventListener('input', onTitleInput);
+document.addEventListener('click', (e) => { if(!e.target.closest('.autocomplete-wrap')) closeSuggestions(); });
+
+// ---------------- Importar historial (CSV tipo TV Time) ----------------
+document.getElementById('toggleImportBtn').addEventListener('click', () => {
+  document.getElementById('importPanel').classList.toggle('open');
+});
+document.getElementById('cancelImportBtn').addEventListener('click', () => {
+  document.getElementById('importPanel').classList.remove('open');
+});
+
+function parseCSV(text){
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for(let i = 0; i < text.length; i++){
+    const c = text[i], next = text[i+1];
+    if(inQuotes){
+      if(c === '"' && next === '"'){ field += '"'; i++; }
+      else if(c === '"'){ inQuotes = false; }
+      else field += c;
+    } else {
+      if(c === '"') inQuotes = true;
+      else if(c === ','){ row.push(field); field = ''; }
+      else if(c === '\r'){ /* skip */ }
+      else if(c === '\n'){ row.push(field); rows.push(row); row = []; field = ''; }
+      else field += c;
+    }
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  if(rows.length === 0) return [];
+  const headers = rows[0].map(h => h.trim());
+  return rows.slice(1).filter(r => r.length > 1 || r[0]).map(r => {
+    const obj = {};
+    headers.forEach((h, idx) => obj[h] = (r[idx] !== undefined ? r[idx] : '').trim());
+    return obj;
+  });
+}
+
+function groupWatchesByShow(records){
+  const groups = new Map(); // key: lowercased clean title -> { title, year, seasons: Map(seasonNum -> Set(episodeNum)) }
+  let movieCount = 0;
+  records.forEach(r => {
+    if(r.type !== 'watch') return;
+    if(r.media_type !== 'episode'){ if(r.media_type === 'movie') movieCount++; return; }
+    if(!r.title || !r.season || !r.episode) return;
+    const yearMatch = r.title.match(/^(.*?)\s*\((\d{4})\)$/);
+    const cleanTitle = yearMatch ? yearMatch[1].trim() : r.title.trim();
+    const year = yearMatch ? yearMatch[2] : (r.year || null);
+    const key = cleanTitle.toLowerCase();
+    if(!groups.has(key)) groups.set(key, { title: cleanTitle, year, seasons: new Map() });
+    const g = groups.get(key);
+    const sNum = parseInt(r.season, 10), eNum = parseInt(r.episode, 10);
+    if(!Number.isFinite(sNum) || !Number.isFinite(eNum)) return;
+    if(!g.seasons.has(sNum)) g.seasons.set(sNum, new Set());
+    g.seasons.get(sNum).add(eNum);
+  });
+  return { groups, movieCount };
+}
+
+function logLine(msg){
+  const box = document.getElementById('importLog');
+  box.style.display = 'block';
+  box.innerHTML += `<div>${escapeHtml(msg)}</div>`;
+  box.scrollTop = box.scrollHeight;
+}
+
+async function pickBestTmdbMatch(title, year){
+  const res = await tmdbSearchShows(title);
+  if(res.error || !res.results || res.results.length === 0) return null;
+  if(year){
+    const withYear = res.results.find(r => (r.first_air_date || '').slice(0,4) === String(year));
+    if(withYear) return withYear;
+  }
+  return res.results[0];
+}
+
+function markImportedEpisodes(series, seasonsMap){
+  let matched = 0, missed = 0;
+  seasonsMap.forEach((episodeSet, seasonNum) => {
+    let season = series.seasons.find(se => se.number === seasonNum);
+    if(!season){
+      const maxEp = Math.max(...episodeSet);
+      season = { number: seasonNum, watched: new Array(maxEp).fill(false) };
+      series.seasons.push(season);
+    }
+    episodeSet.forEach(epNum => {
+      const idx = epNum - 1;
+      if(idx >= season.watched.length){
+        season.watched = season.watched.concat(new Array(idx - season.watched.length + 1).fill(false));
+      }
+      if(idx >= 0){ season.watched[idx] = true; matched++; }
+      else missed++;
+    });
+  });
+  return { matched, missed };
+}
+
+async function runImport(){
+  const fileInput = document.getElementById('importFileInput');
+  const startBtn = document.getElementById('startImportBtn');
+  if(!fileInput.files || !fileInput.files[0]){ alert('Elegí primero el archivo CSV.'); return; }
+  if(!apiKey){ alert('Necesitás pegar tu TMDB API key (botón ⚙) para poder buscar las series del historial.'); return; }
+
+  startBtn.disabled = true;
+  startBtn.textContent = 'Importando...';
+  document.getElementById('importLog').innerHTML = '';
+
+  const text = await fileInput.files[0].text();
+  const records = parseCSV(text);
+  const { groups, movieCount } = groupWatchesByShow(records);
+
+  logLine(`Encontré ${groups.size} series distintas y ${movieCount} películas (las películas se omiten) en el archivo.`);
+
+  let created = 0, merged = 0, notFound = 0, totalEpisodesMarked = 0;
+  let i = 0;
+  for(const [key, g] of groups){
+    i++;
+    logLine(`(${i}/${groups.size}) Buscando "${g.title}"${g.year ? ' (' + g.year + ')' : ''}...`);
+    let existing = seriesList.find(s => s.title.toLowerCase() === g.title.toLowerCase());
+    try{
+      if(existing && existing.tmdbId){
+        const { matched } = markImportedEpisodes(existing, g.seasons);
+        totalEpisodesMarked += matched;
+        merged++;
+        logLine(`  → ya la tenías cargada, marqué ${matched} episodios.`);
+      } else {
+        const match = await pickBestTmdbMatch(g.title, g.year);
+        if(!match){
+          notFound++;
+          logLine(`  → no la encontré en TMDB. La agrego manual con lo que había en el archivo.`);
+          if(existing){
+            const { matched } = markImportedEpisodes(existing, g.seasons);
+            totalEpisodesMarked += matched;
+          } else {
+            addSeriesManual(g.title);
+            const created2 = seriesList[seriesList.length - 1];
+            const { matched } = markImportedEpisodes(created2, g.seasons);
+            totalEpisodesMarked += matched;
+          }
+        } else {
+          const details = await tmdbGetShowDetails(match.id);
+          if(details){
+            if(existing){
+              Object.assign(existing, extractMeta(details));
+              existing.tmdbId = details.id;
+              (details.seasons || []).filter(se => se.season_number > 0 && se.episode_count > 0).forEach(se => {
+                if(!existing.seasons.find(x => x.number === se.season_number)){
+                  existing.seasons.push({ number: se.season_number, watched: new Array(se.episode_count).fill(false) });
+                }
+              });
+              const { matched } = markImportedEpisodes(existing, g.seasons);
+              totalEpisodesMarked += matched;
+              merged++;
+            } else {
+              const seasons = (details.seasons || [])
+                .filter(se => se.season_number > 0 && se.episode_count > 0)
+                .map(se => ({ number: se.season_number, watched: new Array(se.episode_count).fill(false) }));
+              const meta = extractMeta(details);
+              const newSeries = { id: uid(), title: details.name, tmdbId: details.id, seasons, ...meta };
+              const { matched } = markImportedEpisodes(newSeries, g.seasons);
+              totalEpisodesMarked += matched;
+              seriesList.push(newSeries);
+              created++;
+            }
+            logLine(`  → encontrada como "${details.name}", marqué episodios vistos.`);
+          } else {
+            notFound++;
+            logLine(`  → TMDB falló al traer el detalle, la agrego manual.`);
+            addSeriesManual(g.title);
+            const created2 = seriesList[seriesList.length - 1];
+            markImportedEpisodes(created2, g.seasons);
+          }
+        }
+      }
+    }catch(e){
+      notFound++;
+      logLine(`  → error buscando "${g.title}": ${e.message || e}`);
+    }
+    await new Promise(r => setTimeout(r, 260)); // respetar rate limit de TMDB
+  }
+
+  saveData();
+  render();
+  logLine(`Listo ✓ — ${created} series nuevas, ${merged} actualizadas, ${notFound} no encontradas en TMDB, ${totalEpisodesMarked} episodios marcados como vistos en total.`);
+  startBtn.disabled = false;
+  startBtn.textContent = 'Iniciar importación';
+}
+document.getElementById('startImportBtn').addEventListener('click', runImport);
+
+document.getElementById('toggleAddBtn').addEventListener('click', () => {
+  const form = document.getElementById('addForm');
+  form.classList.toggle('open');
+  if(form.classList.contains('open')) document.getElementById('newSeriesTitle').focus();
+});
+document.getElementById('cancelAddBtn').addEventListener('click', () => {
+  document.getElementById('addForm').classList.remove('open');
+  document.getElementById('newSeriesTitle').value = '';
+  closeSuggestions();
+});
+document.getElementById('manualAddBtn').addEventListener('click', () => {
+  const input = document.getElementById('newSeriesTitle');
+  if(input.value.trim()){
+    addSeriesManual(input.value);
+    input.value = '';
+    document.getElementById('addForm').classList.remove('open');
+    closeSuggestions();
+  } else { input.focus(); }
+});
+document.getElementById('searchInput').addEventListener('input', render);
+
+// ---------------- Calendario ----------------
+function formatRelativeDate(dateStr){
+  const d = new Date(dateStr + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diffDays = Math.round((d - today) / 86400000);
+  if(diffDays === 0) return 'Hoy';
+  if(diffDays === 1) return 'Mañana';
+  if(diffDays === -1) return 'Ayer';
+  if(diffDays > 1 && diffDays <= 7) return `En ${diffDays} días`;
+  if(diffDays < -1 && diffDays >= -7) return `Hace ${-diffDays} días`;
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: diffDays > 300 || diffDays < -300 ? 'numeric' : undefined });
+}
+function renderCalendar(){
+  const container = document.getElementById('calendarContainer');
+  const withDates = seriesList.filter(s => s.nextEpisode && s.nextEpisode.air_date);
+  if(withDates.length === 0){
+    container.innerHTML = `<div class="empty"><strong>Nada programado todavía</strong>Agregá series con TMDB (no manuales) para ver sus próximos estrenos, o tocá "Actualizar" si ya las tenés cargadas.</div>`;
+    return;
+  }
+  const today = new Date(); today.setHours(0,0,0,0);
+  const sorted = withDates.slice().sort((a,b) => new Date(a.nextEpisode.air_date) - new Date(b.nextEpisode.air_date));
+  const upcoming = sorted.filter(s => new Date(s.nextEpisode.air_date + 'T00:00:00') >= today);
+  const past = sorted.filter(s => new Date(s.nextEpisode.air_date + 'T00:00:00') < today).reverse();
+
+  function itemHtml(s){
+    const ep = s.nextEpisode;
+    const poster = s.poster ? `<img class="cal-poster" src="${s.poster}" alt="">` : `<div class="cal-poster"></div>`;
+    return `<div class="cal-item">
+      ${poster}
+      <div class="cal-info">
+        <div class="cal-title">${escapeHtml(s.title)}</div>
+        <div class="cal-ep">T${ep.season_number} · Ep ${ep.episode_number}${ep.name ? ' — ' + escapeHtml(ep.name) : ''}</div>
+      </div>
+      <div class="cal-date">${formatRelativeDate(ep.air_date)}</div>
+    </div>`;
+  }
+  let html = '';
+  if(upcoming.length){ html += `<div class="cal-group-label">Próximos</div>` + upcoming.map(itemHtml).join(''); }
+  if(past.length){ html += `<div class="cal-group-label">Recientes</div>` + past.slice(0,10).map(itemHtml).join(''); }
+  container.innerHTML = html;
+}
+document.getElementById('refreshCalBtn').addEventListener('click', async () => {
+  if(!apiKey){ alert('Necesitás pegar tu TMDB API key primero (botón ⚙).'); return; }
+  const btn = document.getElementById('refreshCalBtn');
+  btn.textContent = 'Actualizando...'; btn.disabled = true;
+  const withTmdb = seriesList.filter(s => s.tmdbId);
+  for(const s of withTmdb){
+    await syncSeries(s.id);
+    await new Promise(r => setTimeout(r, 150));
+  }
+  btn.textContent = '🔄 Actualizar'; btn.disabled = false;
+  renderCalendar();
+});
+
+// ---------------- Descubrir ----------------
+async function loadDiscover(){
+  const container = document.getElementById('discoverContainer');
+  if(!apiKey){ container.innerHTML = `<div class="empty" style="grid-column:1/-1"><strong>Falta tu API key</strong>Pegala en el botón ⚙ para ver tendencias.</div>`; return; }
+  container.innerHTML = `<div class="empty" style="grid-column:1/-1">Cargando tendencias...</div>`;
+  const res = await tmdbGetTrending();
+  if(res.error){ container.innerHTML = `<div class="empty" style="grid-column:1/-1"><strong>No se pudo cargar</strong>${escapeHtml(res.error)}</div>`; return; }
+  discoverCache = res.results;
+  renderDiscover();
+}
+function renderDiscover(){
+  const container = document.getElementById('discoverContainer');
+  if(!discoverCache || discoverCache.length === 0){
+    container.innerHTML = `<div class="empty" style="grid-column:1/-1">Sin resultados de tendencias por ahora.</div>`;
+    return;
+  }
+  container.innerHTML = discoverCache.map(show => {
+    const already = seriesList.some(s => s.tmdbId === show.id);
+    const poster = show.poster_path ? TMDB_IMG + show.poster_path : '';
+    const year = (show.first_air_date || '').slice(0,4);
+    return `<div class="disc-card">
+      <button class="disc-add ${already ? 'added' : ''}" onclick="quickAdd(${show.id}, this)" ${already ? 'disabled' : ''} title="${already ? 'Ya la tenés' : 'Agregar'}">${already ? '✓' : '+'}</button>
+      ${poster ? `<img class="disc-poster" src="${poster}" alt="">` : `<div class="disc-poster"></div>`}
+      <div class="disc-body">
+        <p class="disc-title">${escapeHtml(show.name)}</p>
+        <p class="disc-meta">${escapeHtml(year)}</p>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function quickAdd(tmdbId, btnEl){
+  btnEl.textContent = '…'; btnEl.disabled = true;
+  const details = await tmdbGetShowDetails(tmdbId);
+  if(details){
+    addSeriesFromTMDB(details);
+    btnEl.textContent = '✓'; btnEl.classList.add('added');
+  } else {
+    btnEl.textContent = '+'; btnEl.disabled = false;
+    alert('No se pudo agregar. Probá de nuevo.');
+  }
+}
+document.getElementById('refreshDiscoverBtn').addEventListener('click', loadDiscover);
+
+// ---------------- Estadísticas ----------------
+function renderStats2(){
+  let watchedEpisodes = 0, totalMinutes = 0, completed = 0, watching = 0, pending = 0;
+  const genreCount = {};
+  seriesList.forEach(s => {
+    const { watched } = computeProgress(s);
+    watchedEpisodes += watched;
+    totalMinutes += watched * (s.runtime || 40);
+    const st = computeStatus(s);
+    if(st === 'completada') completed++;
+    else if(st === 'viendo') watching++;
+    else if(st === 'pendiente') pending++;
+    (s.genres || []).forEach(g => { genreCount[g] = (genreCount[g] || 0) + 1; });
+  });
+  const totalHours = Math.round(totalMinutes / 60);
+
+  document.getElementById('bigStatsRow').innerHTML = `
+    <div class="big-stat"><div class="num" style="color:var(--gold)">${watchedEpisodes}</div><div class="lbl">episodios</div></div>
+    <div class="big-stat"><div class="num" style="color:var(--teal)">${totalHours}</div><div class="lbl">horas estimadas</div></div>
+    <div class="big-stat"><div class="num" style="color:var(--violet)">${seriesList.length}</div><div class="lbl">series en total</div></div>
+  `;
+
+  const genres = Object.entries(genreCount).sort((a,b) => b[1]-a[1]).slice(0,6);
+  const maxGenre = genres.length ? genres[0][1] : 1;
+  document.getElementById('genreBars').innerHTML = genres.length
+    ? genres.map(([name, count]) => `
+        <div class="bar-row">
+          <div class="bar-label">${escapeHtml(name)}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${(count/maxGenre*100)}%"></div></div>
+          <div class="bar-val">${count}</div>
+        </div>`).join('')
+    : `<p class="sub">Agregá series desde TMDB para ver sus géneros acá.</p>`;
+
+  const statusData = [['Viendo', watching, 'var(--teal)'], ['Pendientes', pending, 'var(--gold)'], ['Completadas', completed, 'var(--violet)']];
+  const maxStatus = Math.max(1, ...statusData.map(x => x[1]));
+  document.getElementById('statusBars').innerHTML = statusData.map(([label, count, color]) => `
+    <div class="bar-row">
+      <div class="bar-label">${label}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(count/maxStatus*100)}%;background:${color}"></div></div>
+      <div class="bar-val">${count}</div>
+    </div>`).join('');
+}
+
+// ---------------- init ----------------
+refreshKeyStatus();
+if(!apiKey) document.getElementById('keyPanel').classList.add('open');
+loadData();
+</script>
+</body>
+</html>
