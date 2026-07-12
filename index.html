@@ -77,6 +77,108 @@
   .tab-section{display:none;}
   .tab-section.active{display:block;}
 
+  /* ---- Login gate ---- */
+  body.locked .wrap, body.locked .bottom-nav{display:none;}
+  .login-screen{
+    display:none;
+    position:fixed;inset:0;
+    background:radial-gradient(circle at 20% 0%, #1c1c2c 0%, var(--bg) 55%), var(--bg);
+    z-index:100;
+    align-items:center;justify-content:center;
+    padding:24px;
+  }
+  body.locked .login-screen{display:flex;}
+  .login-card{
+    width:100%;max-width:380px;
+    text-align:center;
+  }
+  .login-logo{
+    width:76px;height:76px;border-radius:20px;
+    margin:0 auto 20px;display:block;
+  }
+  .login-card h2{
+    font-family:'Bricolage Grotesque',serif;
+    font-size:26px;font-weight:700;margin:0 0 6px;
+  }
+  .login-card .login-sub{color:var(--muted);font-size:13.5px;margin:0 0 24px;line-height:1.5;}
+  .login-card input{
+    width:100%;
+    background:var(--bg-soft);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:13px 14px;
+    color:var(--text);
+    font-family:inherit;font-size:14px;
+    outline:none;margin-bottom:10px;
+  }
+  .login-card input:focus{border-color:var(--gold);}
+  .login-card .btn{width:100%;margin-bottom:8px;}
+  .login-toggle{
+    background:none;border:none;color:var(--teal);
+    font-family:inherit;font-size:13px;cursor:pointer;
+    text-decoration:underline;margin-top:6px;
+  }
+  .login-error{
+    color:var(--danger);font-size:12.5px;
+    font-family:'JetBrains Mono',monospace;
+    margin-top:10px;min-height:16px;
+  }
+  .login-skip{
+    margin-top:22px;padding-top:18px;
+    border-top:1px solid var(--line);
+  }
+  .login-skip button{
+    background:none;border:none;color:var(--muted);
+    font-family:inherit;font-size:12.5px;cursor:pointer;text-decoration:underline;
+  }
+  .login-skip button:hover{color:var(--text);}
+
+  /* ---- Dashboard (Inicio) ---- */
+  .dash-greeting{
+    font-family:'Bricolage Grotesque',serif;
+    font-size:22px;font-weight:700;margin:0 0 16px;
+  }
+  .dash-section-title{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--muted);margin:24px 0 10px;
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .dash-section-title:first-of-type{margin-top:0;}
+  .dash-section-title button{
+    background:none;border:none;color:var(--teal);
+    font-family:inherit;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;
+  }
+  .continue-row{
+    display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;
+    scrollbar-width:thin;
+  }
+  .continue-card{
+    flex:0 0 130px;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:12px;
+    overflow:hidden;
+    cursor:pointer;
+    transition:border-color .15s;
+  }
+  .continue-card:hover{border-color:var(--gold);}
+  .continue-poster{width:100%;aspect-ratio:2/3;object-fit:cover;background:var(--bg-soft);display:block;}
+  .continue-body{padding:8px 10px 10px;}
+  .continue-title{
+    font-size:12.5px;font-weight:600;margin:0 0 3px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .continue-next{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;color:var(--gold);
+  }
+  .continue-mini-track{
+    height:3px;background:var(--bg-soft);border-radius:2px;
+    overflow:hidden;margin-top:6px;
+  }
+  .continue-mini-fill{height:100%;background:var(--gold);border-radius:2px;}
+
   /* ---- Mis Series tab ---- */
   .toolbar{display:flex;gap:10px;margin:8px 0 14px;flex-wrap:wrap;}
   .search-box{flex:1 1 220px;position:relative;}
@@ -215,6 +317,22 @@
 </style>
 </head>
 <body>
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <img class="login-logo" src="icons/icon-192.png" alt="">
+    <h2>Mi bitácora de series</h2>
+    <p class="login-sub" id="loginSub">Inicia sesión para sincronizar tus series en todos tus dispositivos.</p>
+    <input id="loginEmail" type="email" placeholder="tu@email.com" autocomplete="username">
+    <input id="loginPassword" type="password" placeholder="Contraseña" autocomplete="current-password">
+    <button class="btn btn-primary" id="loginSubmitBtn">Iniciar sesión</button>
+    <button class="login-toggle" id="loginModeToggle">¿No tienes cuenta? Crear una</button>
+    <div class="login-error" id="loginError"></div>
+    <div class="login-skip">
+      <button id="loginSkipBtn">Usar sin sincronizar (solo este dispositivo)</button>
+    </div>
+  </div>
+</div>
+
 <div class="wrap">
   <header>
     <div>
@@ -298,8 +416,26 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
     <div class="key-status" id="keyStatus"></div>
   </div>
 
+  <!-- ===== TAB: INICIO ===== -->
+  <section class="tab-section active" id="tab-home">
+    <p class="dash-greeting" id="dashGreeting"></p>
+    <div class="stats-bar" id="dashStats"></div>
+
+    <div class="dash-section-title">
+      <span>Seguir viendo</span>
+      <button onclick="switchTab('series')">ver todas →</button>
+    </div>
+    <div id="continueContainer"></div>
+
+    <div class="dash-section-title">
+      <span>Próximos estrenos</span>
+      <button onclick="switchTab('calendar')">ver calendario →</button>
+    </div>
+    <div id="dashUpcoming"></div>
+  </section>
+
   <!-- ===== TAB: MIS SERIES ===== -->
-  <section class="tab-section active" id="tab-series">
+  <section class="tab-section" id="tab-series">
     <div class="toolbar">
       <div class="search-box"><input id="searchInput" type="text" placeholder="Buscar en mis series..."></div>
       <button class="btn btn-primary" id="toggleAddBtn">+ Agregar serie</button>
@@ -370,7 +506,8 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
 </div>
 
 <nav class="bottom-nav">
-  <button class="nav-btn active" data-tab="series" onclick="switchTab('series')"><span class="nav-icon">📚</span>Mis series</button>
+  <button class="nav-btn active" data-tab="home" onclick="switchTab('home')"><span class="nav-icon">🏠</span>Inicio</button>
+  <button class="nav-btn" data-tab="series" onclick="switchTab('series')"><span class="nav-icon">📚</span>Mis series</button>
   <button class="nav-btn" data-tab="calendar" onclick="switchTab('calendar')"><span class="nav-icon">📅</span>Calendario</button>
   <button class="nav-btn" data-tab="discover" onclick="switchTab('discover')"><span class="nav-icon">🧭</span>Descubrir</button>
   <button class="nav-btn" data-tab="stats" onclick="switchTab('stats')"><span class="nav-icon">📊</span>Estadísticas</button>
@@ -390,7 +527,8 @@ const TMDB_IMG = 'https://image.tmdb.org/t/p/w154';
 const TMDB_IMG_SM = 'https://image.tmdb.org/t/p/w92';
 
 const PAGE_SUBS = {
-  series: 'Buscá series reales, marcá episodios y no perdás nunca en cuál vas.',
+  home: 'Tu resumen de hoy.',
+  series: 'Busca series reales, marca episodios y no pierdas nunca en cuál vas.',
   calendar: 'Cuándo sale el próximo capítulo de lo que estás viendo.',
   discover: 'Series populares para sumar a tu bitácora.',
   stats: 'Un vistazo a todo lo que viste.'
@@ -428,6 +566,7 @@ function switchTab(name){
   document.querySelector(`.nav-btn[data-tab="${name}"]`).classList.add('active');
   document.getElementById('pageSub').textContent = PAGE_SUBS[name];
   window.scrollTo({ top: 0, behavior: 'instant' });
+  if(name === 'home') renderDashboard();
   if(name === 'calendar') renderCalendar();
   if(name === 'discover' && !discoverCache) loadDiscover();
   if(name === 'stats') renderStats2();
@@ -626,6 +765,7 @@ function setFilter(key){ currentFilter = key; render(); }
 function render(){
   renderStats();
   renderFilters();
+  if(document.getElementById('tab-home').classList.contains('active')) renderDashboard();
   const container = document.getElementById('seriesContainer');
   const query = document.getElementById('searchInput').value.trim().toLowerCase();
   let filtered = seriesList.filter(s => s.title.toLowerCase().includes(query));
@@ -1099,8 +1239,15 @@ if('serviceWorker' in navigator){
 // ---------------- Sincronización en la nube (Supabase) ----------------
 const SUPA_URL_KEY = 'supabase_url';
 const SUPA_ANON_KEY = 'supabase_anon_key';
-let supaUrl = localStorage.getItem(SUPA_URL_KEY) || '';
-let supaAnon = localStorage.getItem(SUPA_ANON_KEY) || '';
+
+// Credenciales del proyecto.
+const BUILTIN_SUPA_URL = 'https://zwhyrcnysnuinnchbulp.supabase.co';
+const BUILTIN_SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp3aHlyY255c251aW5uY2hidWxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4MTg3NjcsImV4cCI6MjA5OTM5NDc2N30.PDlYhugshagAYk7ndslCu3gURSxmVitRHvU0Og9p5Vk';
+
+function isPlaceholder(v){ return !v || v.includes('AQUI'); }
+
+let supaUrl = localStorage.getItem(SUPA_URL_KEY) || (isPlaceholder(BUILTIN_SUPA_URL) ? '' : BUILTIN_SUPA_URL);
+let supaAnon = localStorage.getItem(SUPA_ANON_KEY) || (isPlaceholder(BUILTIN_SUPA_ANON) ? '' : BUILTIN_SUPA_ANON);
 let supabaseClient = null;
 let currentSession = null;
 let pushTimer = null;
@@ -1187,7 +1334,13 @@ document.getElementById('signInBtn').addEventListener('click', async () => {
 document.getElementById('signOutBtn').addEventListener('click', async () => {
   await supabaseClient.auth.signOut();
   currentSession = null;
+  localStorage.removeItem(SKIP_LOGIN_KEY);
   refreshSyncUI();
+  document.getElementById('syncPanel').classList.remove('open');
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPassword').value = '';
+  setLoginMode('signin');
+  lockApp();
 });
 
 async function fetchCloudData(){
@@ -1247,12 +1400,179 @@ document.getElementById('useLocalBtn').addEventListener('click', async () => {
 });
 document.getElementById('syncNowBtn').addEventListener('click', pushToCloud);
 
+// ---------------- Pantalla de login ----------------
+const SKIP_LOGIN_KEY = 'skip_login';
+let loginMode = 'signin'; // 'signin' | 'signup'
+
+function lockApp(){ document.body.classList.add('locked'); }
+function unlockApp(){ document.body.classList.remove('locked'); }
+
+function setLoginMode(mode){
+  loginMode = mode;
+  const isSignup = mode === 'signup';
+  document.getElementById('loginSubmitBtn').textContent = isSignup ? 'Crear cuenta' : 'Iniciar sesión';
+  document.getElementById('loginModeToggle').textContent = isSignup
+    ? '¿Ya tienes cuenta? Inicia sesión'
+    : '¿No tienes cuenta? Crear una';
+  document.getElementById('loginSub').textContent = isSignup
+    ? 'Crea tu cuenta para sincronizar tus series en todos tus dispositivos.'
+    : 'Inicia sesión para sincronizar tus series en todos tus dispositivos.';
+  document.getElementById('loginPassword').setAttribute('autocomplete', isSignup ? 'new-password' : 'current-password');
+  document.getElementById('loginError').textContent = '';
+}
+document.getElementById('loginModeToggle').addEventListener('click', () => {
+  setLoginMode(loginMode === 'signin' ? 'signup' : 'signin');
+});
+
+document.getElementById('loginSubmitBtn').addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  const btn = document.getElementById('loginSubmitBtn');
+  errEl.textContent = '';
+
+  if(!email || !password){ errEl.textContent = 'Completa correo y contraseña.'; return; }
+  if(!supabaseClient){ errEl.textContent = 'La sincronización no está configurada en esta app.'; return; }
+
+  btn.disabled = true;
+  btn.textContent = loginMode === 'signup' ? 'Creando...' : 'Entrando...';
+
+  const fn = loginMode === 'signup'
+    ? supabaseClient.auth.signUp({ email, password })
+    : supabaseClient.auth.signInWithPassword({ email, password });
+  const { data, error } = await fn;
+
+  btn.disabled = false;
+  setLoginMode(loginMode);
+
+  if(error){ errEl.textContent = error.message; return; }
+  if(!data.session){
+    errEl.textContent = 'Cuenta creada. Confirma tu correo y luego inicia sesión.';
+    setLoginMode('signin');
+    return;
+  }
+  currentSession = data.session;
+  localStorage.removeItem(SKIP_LOGIN_KEY);
+  unlockApp();
+  refreshSyncUI();
+  await handlePostLoginSync();
+  renderDashboard();
+});
+document.getElementById('loginSkipBtn').addEventListener('click', () => {
+  localStorage.setItem(SKIP_LOGIN_KEY, '1');
+  unlockApp();
+  renderDashboard();
+});
+document.getElementById('loginPassword').addEventListener('keydown', e => {
+  if(e.key === 'Enter') document.getElementById('loginSubmitBtn').click();
+});
+
+// ---------------- Dashboard (Inicio) ----------------
+function renderDashboard(){
+  const hour = new Date().getHours();
+  const saludo = hour < 6 ? 'Buenas noches' : hour < 13 ? 'Buenos días' : hour < 20 ? 'Buenas tardes' : 'Buenas noches';
+  document.getElementById('dashGreeting').textContent = `${saludo} 👋`;
+
+  // stats resumidas
+  let watchedEpisodes = 0, watching = 0, completed = 0;
+  seriesList.forEach(s => {
+    const { watched } = computeProgress(s);
+    watchedEpisodes += watched;
+    const st = computeStatus(s);
+    if(st === 'viendo') watching++;
+    if(st === 'completada') completed++;
+  });
+  document.getElementById('dashStats').innerHTML = `
+    <div class="stat-chip"><div class="stat-num gold">${watchedEpisodes}</div><div class="stat-label">episodios vistos</div></div>
+    <div class="stat-chip"><div class="stat-num teal">${watching}</div><div class="stat-label">viendo ahora</div></div>
+    <div class="stat-chip"><div class="stat-num violet">${completed}</div><div class="stat-label">completadas</div></div>
+  `;
+
+  // seguir viendo
+  const enCurso = seriesList
+    .filter(s => computeStatus(s) === 'viendo')
+    .map(s => ({ s, next: findNext(s), prog: computeProgress(s) }))
+    .slice(0, 12);
+
+  const contCont = document.getElementById('continueContainer');
+  if(enCurso.length === 0){
+    contCont.innerHTML = `<div class="empty"><strong>No estás viendo nada ahora</strong>Marca algún episodio para que aparezca acá.</div>`;
+  } else {
+    contCont.innerHTML = `<div class="continue-row">` + enCurso.map(({ s, next, prog }) => {
+      const pct = prog.total ? Math.round((prog.watched / prog.total) * 100) : 0;
+      const poster = s.poster ? `<img class="continue-poster" src="${s.poster}" alt="">` : `<div class="continue-poster"></div>`;
+      return `<div class="continue-card" onclick="goToSeries('${s.id}')">
+        ${poster}
+        <div class="continue-body">
+          <p class="continue-title">${escapeHtml(s.title)}</p>
+          <span class="continue-next">${next ? `T${next.season} · Ep ${next.episode}` : ''}</span>
+          <div class="continue-mini-track"><div class="continue-mini-fill" style="width:${pct}%"></div></div>
+        </div>
+      </div>`;
+    }).join('') + `</div>`;
+  }
+
+  // próximos estrenos (los 3 más cercanos)
+  const today = new Date(); today.setHours(0,0,0,0);
+  const upcoming = seriesList
+    .filter(s => s.nextEpisode && s.nextEpisode.air_date && new Date(s.nextEpisode.air_date + 'T00:00:00') >= today)
+    .sort((a,b) => new Date(a.nextEpisode.air_date) - new Date(b.nextEpisode.air_date))
+    .slice(0, 3);
+
+  const upCont = document.getElementById('dashUpcoming');
+  if(upcoming.length === 0){
+    upCont.innerHTML = `<div class="empty"><strong>Nada programado</strong>Ninguna de tus series tiene un episodio próximo a estrenarse.</div>`;
+  } else {
+    upCont.innerHTML = upcoming.map(s => {
+      const ep = s.nextEpisode;
+      const poster = s.poster ? `<img class="cal-poster" src="${s.poster}" alt="">` : `<div class="cal-poster"></div>`;
+      return `<div class="cal-item">
+        ${poster}
+        <div class="cal-info">
+          <div class="cal-title">${escapeHtml(s.title)}</div>
+          <div class="cal-ep">T${ep.season_number} · Ep ${ep.episode_number}${ep.name ? ' — ' + escapeHtml(ep.name) : ''}</div>
+        </div>
+        <div class="cal-date">${formatRelativeDate(ep.air_date)}</div>
+      </div>`;
+    }).join('');
+  }
+}
+
+function goToSeries(seriesId){
+  switchTab('series');
+  currentFilter = 'todas';
+  document.getElementById('searchInput').value = '';
+  render();
+  setTimeout(() => {
+    const tickets = document.querySelectorAll('#seriesContainer .ticket');
+    const target = Array.from(tickets).find(t => t.innerHTML.includes(`'${seriesId}'`));
+    if(target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 60);
+}
+
 // ---------------- init ----------------
 refreshKeyStatus();
 if(!apiKey) document.getElementById('keyPanel').classList.add('open');
 loadData();
-if(initSupabaseClient()) restoreSession();
-refreshSyncUI();
+setLoginMode('signin');
+
+(async function init(){
+  const syncAvailable = initSupabaseClient();
+  if(syncAvailable){
+    const { data } = await supabaseClient.auth.getSession();
+    currentSession = data.session || null;
+  }
+  const skipped = localStorage.getItem(SKIP_LOGIN_KEY) === '1';
+
+  if(syncAvailable && !currentSession && !skipped){
+    lockApp();
+  } else {
+    unlockApp();
+    if(currentSession) await handlePostLoginSync();
+  }
+  refreshSyncUI();
+  renderDashboard();
+})();
 </script>
 </body>
 </html>
