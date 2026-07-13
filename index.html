@@ -226,7 +226,8 @@
   .search-box{flex:1 1 220px;position:relative;}
   .search-box input{width:100%;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;padding:12px 14px 12px 38px;color:var(--text);font-size:14px;font-family:inherit;outline:none;}
   .search-box input:focus{border-color:var(--teal);}
-  .search-box::before{content:"⌕";position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:16px;}
+  .search-box::before{content:none;}
+  .search-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;}
 
   .stats-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
   .stat-chip{flex:1 1 120px;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;padding:10px 14px;}
@@ -391,24 +392,27 @@
     transition:border-color .12s, background .12s;
   }
   .ep-row:hover{border-color:var(--gold);}
-  .ep-row.watched{background:#F1B24A20;border-color:#F1B24A50;}
+  .ep-row.watched{background:#CFE8CC;border-color:#7FB685;}
   .ep-check{
     width:22px;height:22px;border-radius:6px;
     border:1.5px solid var(--line);
     flex-shrink:0;
     display:flex;align-items:center;justify-content:center;
-    font-size:13px;color:transparent;
+    color:transparent;
     transition:background .12s, border-color .12s;
   }
+  .ep-check svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;}
   .ep-row.watched .ep-check{
-    background:var(--gold);border-color:var(--gold);color:#120A1F;
+    background:#7FB685;border-color:#7FB685;color:#12331c;
   }
   .ep-num{
     font-family:'JetBrains Mono',monospace;
     font-size:11px;color:var(--muted);
     width:34px;flex-shrink:0;
   }
-  .ep-row.watched .ep-num{color:var(--gold);}
+  .ep-row.watched .ep-num{color:#3f7a4d;}
+  .ep-row.watched .ep-name{color:#1f3d26;}
+  .ep-row.watched .ep-date{color:#3f7a4d;}
   .ep-meta{flex:1;min-width:0;}
   .ep-name{
     font-size:13.5px;font-weight:500;
@@ -439,6 +443,9 @@
   .icon-btn{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:4px 6px;border-radius:6px;}
   .icon-btn:hover{color:var(--danger);background:#8F3A3A20;}
   .icon-btn.sync:hover{color:var(--teal);background:#3A1B5A1a;}
+  .icon-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block;}
+  .inline-icon{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px;margin-right:4px;}
+  .gear-btn svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
 
   .status-badge{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 9px;border-radius:20px;margin-top:4px;}
   .status-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
@@ -551,14 +558,14 @@
       <h1>Series Tracker</h1>
       <p class="sub" id="pageSub">Buscá series reales, marcá episodios y no perdás nunca en cuál vas.</p>
     </div>
-    <button class="gear-btn" id="profileBtn" title="Perfil y configuración">👤</button>
+    <button class="gear-btn" id="profileBtn" title="Perfil y configuración"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
   </header>
 
   <div class="profile-overlay" id="profileOverlay">
     <div class="profile-sheet">
       <div class="profile-sheet-head">
         <h3>Perfil</h3>
-        <button class="icon-btn" id="closeProfileBtn">✕</button>
+        <button class="icon-btn" id="closeProfileBtn"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
 
       <div class="profile-section">
@@ -606,7 +613,7 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
           <div id="authLoggedIn" style="display:none;">
             <p id="loggedInAs" style="color:var(--teal);"></p>
             <div style="display:flex;gap:8px;">
-              <button class="btn btn-primary btn-sm" id="syncNowBtn">🔄 Sincronizar ahora</button>
+              <button class="btn btn-primary btn-sm" id="syncNowBtn"><svg class="inline-icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>Sincronizar ahora</button>
               <button class="btn btn-ghost btn-sm" id="signOutBtn">Cerrar sesión</button>
             </div>
             <div id="conflictChoice" style="display:none;margin-top:10px;background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:10px;">
@@ -659,7 +666,10 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
   <section class="tab-section" id="tab-series">
     <div id="listControls">
     <div class="toolbar">
-      <div class="search-box"><input id="searchInput" type="text" placeholder="Buscar en mis series..."></div>
+      <div class="search-box">
+        <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="searchInput" type="text" placeholder="Buscar en mis series...">
+      </div>
       <button class="btn btn-primary" id="toggleAddBtn">+ Agregar serie</button>
       <button class="btn btn-ghost" id="toggleImportBtn">⬆ Importar historial</button>
     </div>
@@ -698,7 +708,7 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
   <section class="tab-section" id="tab-calendar">
     <div class="cal-toolbar">
       <span class="sub">Próximos estrenos de tus series</span>
-      <button class="btn btn-ghost btn-sm" id="refreshCalBtn">🔄 Actualizar</button>
+      <button class="btn btn-ghost btn-sm" id="refreshCalBtn"><svg class="inline-icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>Actualizar</button>
     </div>
     <div id="calendarContainer"></div>
   </section>
@@ -707,7 +717,7 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
   <section class="tab-section" id="tab-discover">
     <div class="discover-toolbar">
       <span class="sub">Tendencias de la semana en TMDB</span>
-      <button class="btn btn-ghost btn-sm" id="refreshDiscoverBtn">🔄 Actualizar</button>
+      <button class="btn btn-ghost btn-sm" id="refreshDiscoverBtn"><svg class="inline-icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>Actualizar</button>
     </div>
     <div class="discover-grid" id="discoverContainer"></div>
   </section>
@@ -1179,10 +1189,10 @@ function renderDetail(seriesId){
   const posterHtml = s.poster ? `<img class="detail-poster" src="${s.poster}" alt="">` : `<div class="detail-poster"></div>`;
   const genresHtml = (s.genres && s.genres.length)
     ? `<div class="detail-genres">${escapeHtml(s.genres.slice(0,3).join(' · '))}${s.runtime ? ' · ' + s.runtime + ' min' : ''}</div>` : '';
-  const syncBtn = s.tmdbId ? `<button class="btn btn-ghost" onclick="syncSeries('${s.id}')">🔄 Actualizar</button>` : '';
+  const syncBtn = s.tmdbId ? `<button class="btn btn-ghost" onclick="syncSeries('${s.id}')"><svg class="inline-icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>Actualizar</button>` : '';
 
   view.innerHTML = `
-    <button class="detail-back" onclick="closeDetail()">← Volver a mis series</button>
+    <button class="detail-back" onclick="closeDetail()"><svg class="inline-icon" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Volver a mis series</button>
     <div class="detail-hero">
       ${backdropHtml}
       <div class="detail-hero-inner">
@@ -1194,8 +1204,10 @@ function renderDetail(seriesId){
           ${total ? `<div class="progress-track" style="margin:10px 0 0;"><div class="progress-fill" style="width:${pct}%;background:${status === 'completada' ? 'var(--progress-green)' : status === 'abandonada' ? 'var(--muted)' : 'linear-gradient(90deg,#8a4f9e,var(--gold))'}"></div></div>` : ''}
           <div class="detail-actions">
             ${syncBtn}
-            <button class="btn btn-ghost" onclick="toggleAbandoned('${s.id}')">${s.abandoned ? '↩ Quitar de abandonadas' : '🚫 Marcar como abandonada'}</button>
-            <button class="btn btn-ghost" onclick="removeSeries('${s.id}')">🗑 Eliminar</button>
+            <button class="btn btn-ghost" onclick="toggleAbandoned('${s.id}')">${s.abandoned
+              ? '<svg class="inline-icon" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>Quitar de abandonadas'
+              : '<svg class="inline-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>Marcar como abandonada'}</button>
+            <button class="btn btn-ghost" onclick="removeSeries('${s.id}')"><svg class="inline-icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>Eliminar</button>
           </div>
         </div>
       </div>
@@ -1259,9 +1271,11 @@ async function renderEpisodeList(s, seasonNumber){
   if(actions){
     actions.innerHTML = `
       <button class="btn btn-ghost" onclick="toggleWholeSeason('${s.id}', ${seasonNumber})">
-        ${allWatched ? '✕ Desmarcar temporada' : '✓ Marcar toda la temporada'}
+        ${allWatched
+          ? '<svg class="inline-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>Desmarcar temporada'
+          : '<svg class="inline-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Marcar toda la temporada'}
       </button>
-      <button class="btn btn-ghost" onclick="removeSeason('${s.id}', ${seasonNumber})">🗑 Eliminar T${seasonNumber}</button>
+      <button class="btn btn-ghost" onclick="removeSeason('${s.id}', ${seasonNumber})"><svg class="inline-icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>Eliminar T${seasonNumber}</button>
     `;
   }
 
@@ -1287,7 +1301,7 @@ async function renderEpisodeList(s, seasonNumber){
     }
 
     return `<div class="ep-row ${w ? 'watched' : ''}" onclick="toggleEpisode('${s.id}', ${seasonNumber}, ${i})">
-      <div class="ep-check">✓</div>
+      <div class="ep-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
       <div class="ep-num">${seasonNumber}x${String(num).padStart(2,'0')}</div>
       <div class="ep-meta">
         <div class="ep-name">${escapeHtml(name)}</div>
@@ -1321,13 +1335,13 @@ async function onTitleInput(e){
   const query = e.target.value.trim();
   clearTimeout(acTimer);
   if(query.length < 2){ closeSuggestions(); return; }
-  if(!apiKey){ openSuggestions(`<div class="sugg-status">Todavía no pegaste tu TMDB API key (botón ⚙ arriba). Podés escribir el título y usar "Agregar manual".</div>`); return; }
+  if(!apiKey){ openSuggestions(`<div class="sugg-status">Todavía no pegaste tu TMDB API key (ícono de perfil arriba). Podés escribir el título y usar "Agregar manual".</div>`); return; }
   openSuggestions(`<div class="sugg-status">Buscando en TMDB...</div>`);
   acTimer = setTimeout(async () => {
     acLastQuery = query;
     const res = await tmdbSearchShows(query);
     if(query !== acLastQuery) return;
-    if(res.error === 'bad-key'){ openSuggestions(`<div class="sugg-status">La API key no es válida. Revisala en el botón ⚙.</div>`); return; }
+    if(res.error === 'bad-key'){ openSuggestions(`<div class="sugg-status">La API key no es válida. Revisala en tu perfil.</div>`); return; }
     if(res.error){ openSuggestions(`<div class="sugg-status">No se pudo conectar con TMDB (${escapeHtml(res.error)}). Podés agregar la serie manual.</div>`); return; }
     if(res.results.length === 0){ openSuggestions(`<div class="sugg-status">Sin coincidencias para "${escapeHtml(query)}". Probá "Agregar manual".</div>`); return; }
     const html = res.results.map(show => {
@@ -1451,7 +1465,7 @@ async function runImport(){
   const fileInput = document.getElementById('importFileInput');
   const startBtn = document.getElementById('startImportBtn');
   if(!fileInput.files || !fileInput.files[0]){ alert('Elegí primero el archivo CSV.'); return; }
-  if(!apiKey){ alert('Necesitás pegar tu TMDB API key (botón ⚙) para poder buscar las series del historial.'); return; }
+  if(!apiKey){ alert('Necesitás pegar tu TMDB API key (ícono de perfil) para poder buscar las series del historial.'); return; }
 
   startBtn.disabled = true;
   startBtn.textContent = 'Importando...';
@@ -1602,7 +1616,7 @@ function renderCalendar(){
   container.innerHTML = html;
 }
 document.getElementById('refreshCalBtn').addEventListener('click', async () => {
-  if(!apiKey){ alert('Necesitás pegar tu TMDB API key primero (botón ⚙).'); return; }
+  if(!apiKey){ alert('Necesitás pegar tu TMDB API key primero (ícono de perfil).'); return; }
   const btn = document.getElementById('refreshCalBtn');
   btn.textContent = 'Actualizando...'; btn.disabled = true;
   const withTmdb = seriesList.filter(s => s.tmdbId);
@@ -1610,14 +1624,14 @@ document.getElementById('refreshCalBtn').addEventListener('click', async () => {
     await syncSeries(s.id);
     await new Promise(r => setTimeout(r, 150));
   }
-  btn.textContent = '🔄 Actualizar'; btn.disabled = false;
+  btn.innerHTML = '<svg class="inline-icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>Actualizar'; btn.disabled = false;
   renderCalendar();
 });
 
 // ---------------- Descubrir ----------------
 async function loadDiscover(){
   const container = document.getElementById('discoverContainer');
-  if(!apiKey){ container.innerHTML = `<div class="empty" style="grid-column:1/-1"><strong>Falta tu API key</strong>Pegala en el botón ⚙ para ver tendencias.</div>`; return; }
+  if(!apiKey){ container.innerHTML = `<div class="empty" style="grid-column:1/-1"><strong>Falta tu API key</strong>Pegala en el ícono de perfil para ver tendencias.</div>`; return; }
   container.innerHTML = `<div class="empty" style="grid-column:1/-1">Cargando tendencias...</div>`;
   const res = await tmdbGetTrending();
   if(res.error){ container.innerHTML = `<div class="empty" style="grid-column:1/-1"><strong>No se pudo cargar</strong>${escapeHtml(res.error)}</div>`; return; }
@@ -1989,7 +2003,7 @@ function renderPosterCard(s){
 function renderDashboard(){
   const hour = new Date().getHours();
   const saludo = hour < 6 ? 'Buenas noches' : hour < 13 ? 'Buenos días' : hour < 20 ? 'Buenas tardes' : 'Buenas noches';
-  document.getElementById('dashGreeting').textContent = `${saludo} 👋`;
+  document.getElementById('dashGreeting').textContent = saludo;
 
   // stats resumidas
   let watchedEpisodes = 0, watching = 0, completed = 0;
