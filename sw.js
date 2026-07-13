@@ -1,6 +1,7 @@
-// Service worker: cachea el "cascarón" de la app para que abra offline.
-// Los datos viven en localStorage (no acá), y las llamadas a TMDB siempre van a la red.
-const CACHE_NAME = 'bitacora-series-v2';
+// Service worker: cachea el "cascarón" de la app solo como respaldo offline.
+// Estrategia: siempre intenta la red primero (para traer la versión más nueva),
+// y usa el cache guardado únicamente si no hay conexión.
+const CACHE_NAME = 'bitacora-series-v3';
 const APP_SHELL = [
   './',
   './index.html',
@@ -32,17 +33,18 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) {
     return;
   }
+  if (event.request.method !== 'GET') {
+    return;
+  }
 
-  // Todo lo demás (el cascarón de la app): cache-first, con fallback a red.
+  // El cascarón de la app: red primero (trae siempre lo último), cache solo si no hay señal.
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      return cached || fetch(event.request).then((response) => {
-        if (response && response.ok && event.request.method === 'GET') {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        }
-        return response;
-      }).catch(() => cached);
-    })
+    fetch(event.request).then((response) => {
+      if (response && response.ok) {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+      }
+      return response;
+    }).catch(() => caches.match(event.request))
   );
 });

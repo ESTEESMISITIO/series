@@ -1544,7 +1544,19 @@ function renderStats2(){
 // ---------------- PWA ----------------
 if('serviceWorker' in navigator){
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW no registrado', err));
+    navigator.serviceWorker.register('./sw.js').then((reg) => {
+      // Revisa si hay una versión nueva cada vez que se abre la app.
+      reg.update().catch(() => {});
+    }).catch(err => console.warn('SW no registrado', err));
+
+    // El service worker nuevo se activa solo (skipWaiting en sw.js).
+    // Cuando toma control, recargamos una sola vez para mostrar la versión nueva.
+    let refreshedOnce = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if(refreshedOnce) return;
+      refreshedOnce = true;
+      window.location.reload();
+    });
   });
 }
 
