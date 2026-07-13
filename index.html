@@ -671,7 +671,8 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
         <input id="searchInput" type="text" placeholder="Buscar en mis series...">
       </div>
       <button class="btn btn-primary" id="toggleAddBtn">+ Agregar serie</button>
-      <button class="btn btn-ghost" id="toggleImportBtn">⬆ Importar historial</button>
+      <button class="btn btn-ghost" id="toggleImportBtn"><svg class="inline-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Importar historial</button>
+      <button class="btn btn-ghost" id="dedupeBtn"><svg class="inline-icon" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Fusionar duplicados</button>
     </div>
 
     <div class="add-form" id="importPanel">
@@ -1374,6 +1375,73 @@ document.getElementById('newSeriesTitle').addEventListener('input', onTitleInput
 document.addEventListener('click', (e) => { if(!e.target.closest('.autocomplete-wrap')) closeSuggestions(); });
 
 // ---------------- Importar historial (CSV tipo TV Time) ----------------
+// ---------------- Fusionar series duplicadas ----------------
+function normalizeTitle(t){
+  return (t || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function mergeSeriesInto(primary, dupe){
+  dupe.seasons.forEach(dse => {
+    const pse = primary.seasons.find(x => x.number === dse.number);
+    if(!pse){
+      primary.seasons.push({ number: dse.number, watched: dse.watched.slice() });
+    } else {
+      const maxLen = Math.max(pse.watched.length, dse.watched.length);
+      const merged = [];
+      for(let i = 0; i < maxLen; i++){
+        merged.push(Boolean(pse.watched[i]) || Boolean(dse.watched[i]));
+      }
+      pse.watched = merged;
+    }
+  });
+  primary.lastActivity = Math.max(primary.lastActivity || 0, dupe.lastActivity || 0) || primary.lastActivity;
+  primary.importLastWatched = Math.max(primary.importLastWatched || 0, dupe.importLastWatched || 0) || primary.importLastWatched;
+  if(dupe.abandoned) primary.abandoned = true;
+  if(!primary.poster && dupe.poster) primary.poster = dupe.poster;
+  if(!primary.backdrop && dupe.backdrop) primary.backdrop = dupe.backdrop;
+  if((!primary.genres || !primary.genres.length) && dupe.genres && dupe.genres.length) primary.genres = dupe.genres;
+  if(!primary.tmdbId && dupe.tmdbId) primary.tmdbId = dupe.tmdbId;
+}
+
+function dedupeSeries(){
+  const groupsMap = new Map();
+  seriesList.forEach(s => {
+    const key = s.tmdbId ? ('tmdb:' + s.tmdbId) : ('title:' + normalizeTitle(s.title));
+    if(!groupsMap.has(key)) groupsMap.set(key, []);
+    groupsMap.get(key).push(s);
+  });
+
+  let mergedGroups = 0, removedCount = 0;
+  const result = [];
+  groupsMap.forEach(list => {
+    if(list.length === 1){ result.push(list[0]); return; }
+    mergedGroups++;
+    list.sort((a, b) => computeProgress(b).watched - computeProgress(a).watched);
+    const primary = list[0];
+    for(let k = 1; k < list.length; k++){
+      mergeSeriesInto(primary, list[k]);
+      if(openSeriesId === list[k].id) openSeriesId = primary.id;
+      removedCount++;
+    }
+    result.push(primary);
+  });
+
+  seriesList = result;
+  saveData();
+  render();
+  return { mergedGroups, removedCount };
+}
+
+document.getElementById('dedupeBtn').addEventListener('click', () => {
+  if(!confirm('Voy a buscar series repetidas y fusionar su progreso en una sola copia (sin perder episodios marcados). ¿Continuar?')) return;
+  const { mergedGroups, removedCount } = dedupeSeries();
+  if(removedCount === 0){
+    alert('No encontré series duplicadas. Todo está en orden.');
+  } else {
+    alert(`Listo: fusioné ${mergedGroups} serie(s) que estaban duplicadas y eliminé ${removedCount} copia(s) repetida(s). El progreso se combinó, no se perdió nada.`);
+  }
+});
+
 document.getElementById('toggleImportBtn').addEventListener('click', () => {
   document.getElementById('importPanel').classList.toggle('open');
 });
@@ -1498,19 +1566,46 @@ async function runImport(){
   for(const [key, g] of groups){
     i++;
     logLine(`(${i}/${groups.size}) Buscando "${g.title}"${g.year ? ' (' + g.year + ')' : ''}...`);
-    let existing = seriesList.find(s => s.title.toLowerCase() === g.title.toLowerCase());
     try{
-      if(existing && existing.tmdbId){
-        const { matched } = markImportedEpisodes(existing, g.seasons);
-        applyImportDate(existing, g);
-        totalEpisodesMarked += matched;
-        merged++;
-        logLine(`  → ya la tenías cargada, marqué ${matched} episodios.`);
-      } else {
-        const match = await pickBestTmdbMatch(g.title, g.year);
-        if(!match){
+      const match = apiKey ? await pickBestTmdbMatch(g.title, g.year) : null;
+
+      // Preferimos encontrar la serie ya cargada por tmdbId (confiable sin importar el idioma
+      // del título). Si no hay match de TMDB, recién ahí probamos por título como respaldo.
+      let existing = match ? seriesList.find(s => s.tmdbId === match.id) : null;
+      if(!existing) existing = seriesList.find(s => s.title.toLowerCase() === g.title.toLowerCase());
+
+      if(match){
+        const details = await tmdbGetShowDetails(match.id);
+        if(details){
+          if(existing){
+            Object.assign(existing, extractMeta(details));
+            existing.tmdbId = details.id;
+            (details.seasons || []).filter(se => se.season_number > 0 && se.episode_count > 0).forEach(se => {
+              if(!existing.seasons.find(x => x.number === se.season_number)){
+                existing.seasons.push({ number: se.season_number, watched: new Array(se.episode_count).fill(false) });
+              }
+            });
+            const { matched } = markImportedEpisodes(existing, g.seasons);
+            applyImportDate(existing, g);
+            totalEpisodesMarked += matched;
+            merged++;
+            logLine(`  → ya la tenías cargada (${existing.title}), marqué ${matched} episodios.`);
+          } else {
+            const seasons = (details.seasons || [])
+              .filter(se => se.season_number > 0 && se.episode_count > 0)
+              .map(se => ({ number: se.season_number, watched: new Array(se.episode_count).fill(false) }));
+            const meta = extractMeta(details);
+            const newSeries = { id: uid(), title: details.name, tmdbId: details.id, seasons, ...meta };
+            const { matched } = markImportedEpisodes(newSeries, g.seasons);
+            applyImportDate(newSeries, g);
+            totalEpisodesMarked += matched;
+            seriesList.push(newSeries);
+            created++;
+            logLine(`  → encontrada como "${details.name}", marqué episodios vistos.`);
+          }
+        } else {
           notFound++;
-          logLine(`  → no la encontré en TMDB. La agrego manual con lo que había en el archivo.`);
+          logLine(`  → TMDB falló al traer el detalle, la agrego/actualizo manual.`);
           if(existing){
             const { matched } = markImportedEpisodes(existing, g.seasons);
             applyImportDate(existing, g);
@@ -1522,42 +1617,20 @@ async function runImport(){
             applyImportDate(created2, g);
             totalEpisodesMarked += matched;
           }
+        }
+      } else {
+        notFound++;
+        logLine(`  → no la encontré en TMDB. La agrego/actualizo manual con lo que había en el archivo.`);
+        if(existing){
+          const { matched } = markImportedEpisodes(existing, g.seasons);
+          applyImportDate(existing, g);
+          totalEpisodesMarked += matched;
         } else {
-          const details = await tmdbGetShowDetails(match.id);
-          if(details){
-            if(existing){
-              Object.assign(existing, extractMeta(details));
-              existing.tmdbId = details.id;
-              (details.seasons || []).filter(se => se.season_number > 0 && se.episode_count > 0).forEach(se => {
-                if(!existing.seasons.find(x => x.number === se.season_number)){
-                  existing.seasons.push({ number: se.season_number, watched: new Array(se.episode_count).fill(false) });
-                }
-              });
-              const { matched } = markImportedEpisodes(existing, g.seasons);
-              applyImportDate(existing, g);
-              totalEpisodesMarked += matched;
-              merged++;
-            } else {
-              const seasons = (details.seasons || [])
-                .filter(se => se.season_number > 0 && se.episode_count > 0)
-                .map(se => ({ number: se.season_number, watched: new Array(se.episode_count).fill(false) }));
-              const meta = extractMeta(details);
-              const newSeries = { id: uid(), title: details.name, tmdbId: details.id, seasons, ...meta };
-              const { matched } = markImportedEpisodes(newSeries, g.seasons);
-              applyImportDate(newSeries, g);
-              totalEpisodesMarked += matched;
-              seriesList.push(newSeries);
-              created++;
-            }
-            logLine(`  → encontrada como "${details.name}", marqué episodios vistos.`);
-          } else {
-            notFound++;
-            logLine(`  → TMDB falló al traer el detalle, la agrego manual.`);
-            addSeriesManual(g.title);
-            const created2 = seriesList[seriesList.length - 1];
-            markImportedEpisodes(created2, g.seasons);
-            applyImportDate(created2, g);
-          }
+          addSeriesManual(g.title);
+          const created2 = seriesList[seriesList.length - 1];
+          const { matched } = markImportedEpisodes(created2, g.seasons);
+          applyImportDate(created2, g);
+          totalEpisodesMarked += matched;
         }
       }
     }catch(e){
