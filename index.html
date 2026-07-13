@@ -178,6 +178,9 @@
     overflow:hidden;margin-top:6px;
   }
   .continue-mini-fill{height:100%;background:var(--gold);border-radius:2px;}
+  .cat-section{margin-bottom:8px;}
+  .cat-grid-wrap{display:flex;flex-wrap:wrap;gap:12px;}
+  .cat-grid-wrap .continue-card{flex:0 0 130px;}
 
   /* ---- Mis Series tab ---- */
   .toolbar{display:flex;gap:10px;margin:8px 0 14px;flex-wrap:wrap;}
@@ -616,7 +619,6 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
     </div>
 
     <div class="stats-bar" id="statsBar"></div>
-    <div class="filter-row" id="filterRow"></div>
     <div id="seriesContainer"></div>
     </div>
     <div class="detail-view" id="detailView"></div>
@@ -937,25 +939,12 @@ function renderStats(){
     <div class="stat-chip"><div class="stat-num violet">${completed}</div><div class="stat-label">completadas</div></div>
   `;
 }
-function renderFilters(){
-  const counts = { todas: seriesList.length, viendo: 0, pendiente: 0, completada: 0 };
-  seriesList.forEach(s => { const st = computeStatus(s); if(counts[st] !== undefined) counts[st]++; });
-  const chips = [
-    { key: 'todas', label: 'Todas' }, { key: 'viendo', label: 'Viendo' },
-    { key: 'pendiente', label: 'Pendientes' }, { key: 'completada', label: 'Completadas' }
-  ];
-  document.getElementById('filterRow').innerHTML = chips.map(c => `
-    <button class="filter-chip ${currentFilter === c.key ? 'active' : ''}" data-status="${c.key}" onclick="setFilter('${c.key}')">
-      <span class="dot"></span>${c.label} (${counts[c.key] || 0})
-    </button>`).join('');
-}
-function setFilter(key){ currentFilter = key; render(); }
+
 
 let openSeriesId = null;
 
 function render(){
   renderStats();
-  renderFilters();
   if(document.getElementById('tab-home').classList.contains('active')) renderDashboard();
 
   if(openSeriesId){
@@ -967,50 +956,38 @@ function render(){
 
   const container = document.getElementById('seriesContainer');
   const query = document.getElementById('searchInput').value.trim().toLowerCase();
-  let filtered = seriesList.filter(s => s.title.toLowerCase().includes(query));
-  if(currentFilter !== 'todas') filtered = filtered.filter(s => computeStatus(s) === currentFilter);
-  filtered = filtered.slice().sort((a,b) => {
-    const diff = STATUS_ORDER[computeStatus(a)] - STATUS_ORDER[computeStatus(b)];
-    return diff !== 0 ? diff : a.title.localeCompare(b.title);
-  });
 
   if(seriesList.length === 0){
     container.innerHTML = `<div class="empty"><strong>Todavía no agregas ninguna serie</strong>Toca "+ Agregar serie" para empezar tu bitácora.</div>`;
     return;
   }
-  if(filtered.length === 0){
-    container.innerHTML = `<div class="empty"><strong>Sin resultados</strong>No encontré ninguna serie que coincida con eso.</div>`;
+
+  if(query){
+    const filtered = seriesList.filter(s => s.title.toLowerCase().includes(query))
+      .sort((a,b) => a.title.localeCompare(b.title));
+    container.innerHTML = filtered.length
+      ? `<div class="cat-grid-wrap">` + filtered.map(s => renderPosterCard(s)).join('') + `</div>`
+      : `<div class="empty"><strong>Sin resultados</strong>No encontré ninguna serie que coincida con eso.</div>`;
     return;
   }
-  container.innerHTML = `<div class="series-grid">` + filtered.map(s => renderGridCard(s)).join('') + `</div>`;
-}
 
-function renderGridCard(s){
-  const { total, watched } = computeProgress(s);
-  const pct = total ? Math.round((watched/total)*100) : 0;
-  const next = findNext(s);
-  const status = computeStatus(s);
-
-  let nextText, nextClass;
-  if(status === 'completada'){ nextText = 'Completa'; nextClass = 'done'; }
-  else if(status === 'viendo' && next){ nextText = `T${next.season} · E${next.episode}`; nextClass = ''; }
-  else if(status === 'pendiente'){ nextText = `${total} caps`; nextClass = 'pending'; }
-  else { nextText = 'Sin capítulos'; nextClass = 'pending'; }
-
-  const posterHtml = s.poster
-    ? `<img class="grid-poster" src="${s.poster}" alt="" loading="lazy">`
-    : `<div class="grid-poster-fallback">${escapeHtml(s.title)}</div>`;
-  const badge = status === 'completada' ? `<div class="grid-badge completada">✓</div>` : '';
-
-  return `<div class="grid-card" onclick="openDetail('${s.id}')">
-    ${posterHtml}
-    ${badge}
-    <div class="grid-overlay">
-      <p class="grid-title">${escapeHtml(s.title)}</p>
-      <span class="grid-next ${nextClass}">${nextText}</span>
-    </div>
-    ${total ? `<div class="grid-progress"><div class="grid-progress-fill" style="width:${pct}%"></div></div>` : ''}
-  </div>`;
+  const groups = [
+    { key: 'viendo', label: 'Ver a continuación' },
+    { key: 'pendiente', label: 'Pendientes' },
+    { key: 'completada', label: 'Completadas' },
+    { key: 'sindatos', label: 'Sin capítulos cargados' }
+  ];
+  let html = '';
+  groups.forEach(g => {
+    const items = seriesList.filter(s => computeStatus(s) === g.key).sort((a,b) => a.title.localeCompare(b.title));
+    if(items.length === 0) return;
+    html += `
+      <div class="cat-section">
+        <div class="dash-section-title"><span>${g.label} (${items.length})</span></div>
+        <div class="continue-row">${items.map(s => renderPosterCard(s)).join('')}</div>
+      </div>`;
+  });
+  container.innerHTML = html;
 }
 
 function openDetail(seriesId){
@@ -1784,6 +1761,29 @@ document.getElementById('loginPassword').addEventListener('keydown', e => {
 });
 
 // ---------------- Dashboard (Inicio) ----------------
+function renderPosterCard(s){
+  const next = findNext(s);
+  const prog = computeProgress(s);
+  const pct = prog.total ? Math.round((prog.watched / prog.total) * 100) : 0;
+  const status = computeStatus(s);
+  const poster = s.poster ? `<img class="continue-poster" src="${s.poster}" alt="">` : `<div class="continue-poster"></div>`;
+
+  let caption;
+  if(status === 'completada') caption = '✓ Completa';
+  else if(status === 'viendo' && next) caption = `T${next.season} · Ep ${next.episode}`;
+  else if(status === 'pendiente') caption = `${prog.total} capítulos`;
+  else caption = '';
+
+  return `<div class="continue-card" onclick="goToSeries('${s.id}')">
+    ${poster}
+    <div class="continue-body">
+      <p class="continue-title">${escapeHtml(s.title)}</p>
+      <span class="continue-next">${caption}</span>
+      ${prog.total ? `<div class="continue-mini-track"><div class="continue-mini-fill" style="width:${pct}%"></div></div>` : ''}
+    </div>
+  </div>`;
+}
+
 function renderDashboard(){
   const hour = new Date().getHours();
   const saludo = hour < 6 ? 'Buenas noches' : hour < 13 ? 'Buenos días' : hour < 20 ? 'Buenas tardes' : 'Buenas noches';
@@ -1805,27 +1805,13 @@ function renderDashboard(){
   `;
 
   // seguir viendo
-  const enCurso = seriesList
-    .filter(s => computeStatus(s) === 'viendo')
-    .map(s => ({ s, next: findNext(s), prog: computeProgress(s) }))
-    .slice(0, 12);
+  const enCurso = seriesList.filter(s => computeStatus(s) === 'viendo').slice(0, 12);
 
   const contCont = document.getElementById('continueContainer');
   if(enCurso.length === 0){
     contCont.innerHTML = `<div class="empty"><strong>No estás viendo nada ahora</strong>Marca algún episodio para que aparezca acá.</div>`;
   } else {
-    contCont.innerHTML = `<div class="continue-row">` + enCurso.map(({ s, next, prog }) => {
-      const pct = prog.total ? Math.round((prog.watched / prog.total) * 100) : 0;
-      const poster = s.poster ? `<img class="continue-poster" src="${s.poster}" alt="">` : `<div class="continue-poster"></div>`;
-      return `<div class="continue-card" onclick="goToSeries('${s.id}')">
-        ${poster}
-        <div class="continue-body">
-          <p class="continue-title">${escapeHtml(s.title)}</p>
-          <span class="continue-next">${next ? `T${next.season} · Ep ${next.episode}` : ''}</span>
-          <div class="continue-mini-track"><div class="continue-mini-fill" style="width:${pct}%"></div></div>
-        </div>
-      </div>`;
-    }).join('') + `</div>`;
+    contCont.innerHTML = `<div class="continue-row">` + enCurso.map(s => renderPosterCard(s)).join('') + `</div>`;
   }
 
   // próximos estrenos (los 3 más cercanos)
