@@ -1031,6 +1031,10 @@ function computeProgress(s){
   s.seasons.forEach(se => { total += se.watched.length; watched += se.watched.filter(Boolean).length; });
   return { total, watched };
 }
+function effectiveActivity(s){
+  return Math.max(s.lastActivity || 0, s.importLastWatched || 0);
+}
+
 function computeStatus(s){
   if(s.abandoned) return 'abandonada';
   const { total, watched } = computeProgress(s);
@@ -1112,10 +1116,12 @@ function render(){
 
   const sinVerTiempo = viendoAll
     .filter(s => !(s.lastActivity && (now - s.lastActivity) <= staleMs))
-    .sort((a, b) => (a.lastActivity || 0) - (b.lastActivity || 0));
+    .sort((a, b) => effectiveActivity(b) - effectiveActivity(a));
 
-  const sinVer = seriesList.filter(s => computeStatus(s) === 'pendiente').sort((a,b) => a.title.localeCompare(b.title));
-  const completadas = seriesList.filter(s => computeStatus(s) === 'completada').sort((a,b) => a.title.localeCompare(b.title));
+  const sinVer = seriesList.filter(s => computeStatus(s) === 'pendiente')
+    .sort((a, b) => effectiveActivity(b) - effectiveActivity(a) || a.title.localeCompare(b.title));
+  const completadas = seriesList.filter(s => computeStatus(s) === 'completada')
+    .sort((a, b) => effectiveActivity(b) - effectiveActivity(a) || a.title.localeCompare(b.title));
   const sinDatos = seriesList.filter(s => computeStatus(s) === 'sindatos').sort((a,b) => a.title.localeCompare(b.title));
   const abandonadas = seriesList.filter(s => computeStatus(s) === 'abandonada').sort((a,b) => a.title.localeCompare(b.title));
 
@@ -1403,7 +1409,7 @@ function parseCSV(text){
 }
 
 function groupWatchesByShow(records){
-  const groups = new Map(); // key: lowercased clean title -> { title, year, seasons: Map(seasonNum -> Set(episodeNum)) }
+  const groups = new Map(); // key: lowercased clean title -> { title, year, seasons: Map(seasonNum -> Set(episodeNum)), lastWatchedAt: ms }
   let movieCount = 0;
   records.forEach(r => {
     if(r.type !== 'watch') return;
@@ -1413,12 +1419,16 @@ function groupWatchesByShow(records){
     const cleanTitle = yearMatch ? yearMatch[1].trim() : r.title.trim();
     const year = yearMatch ? yearMatch[2] : (r.year || null);
     const key = cleanTitle.toLowerCase();
-    if(!groups.has(key)) groups.set(key, { title: cleanTitle, year, seasons: new Map() });
+    if(!groups.has(key)) groups.set(key, { title: cleanTitle, year, seasons: new Map(), lastWatchedAt: 0 });
     const g = groups.get(key);
     const sNum = parseInt(r.season, 10), eNum = parseInt(r.episode, 10);
     if(!Number.isFinite(sNum) || !Number.isFinite(eNum)) return;
     if(!g.seasons.has(sNum)) g.seasons.set(sNum, new Set());
     g.seasons.get(sNum).add(eNum);
+    if(r.watched_at){
+      const t = new Date(r.watched_at).getTime();
+      if(Number.isFinite(t) && t > g.lastWatchedAt) g.lastWatchedAt = t;
+    }
   });
   return { groups, movieCount };
 }
@@ -1438,6 +1448,12 @@ async function pickBestTmdbMatch(title, year){
     if(withYear) return withYear;
   }
   return res.results[0];
+}
+
+function applyImportDate(series, g){
+  if(g.lastWatchedAt && g.lastWatchedAt > (series.importLastWatched || 0)){
+    series.importLastWatched = g.lastWatchedAt;
+  }
 }
 
 function markImportedEpisodes(series, seasonsMap){
@@ -1486,6 +1502,7 @@ async function runImport(){
     try{
       if(existing && existing.tmdbId){
         const { matched } = markImportedEpisodes(existing, g.seasons);
+        applyImportDate(existing, g);
         totalEpisodesMarked += matched;
         merged++;
         logLine(`  → ya la tenías cargada, marqué ${matched} episodios.`);
@@ -1496,11 +1513,13 @@ async function runImport(){
           logLine(`  → no la encontré en TMDB. La agrego manual con lo que había en el archivo.`);
           if(existing){
             const { matched } = markImportedEpisodes(existing, g.seasons);
+            applyImportDate(existing, g);
             totalEpisodesMarked += matched;
           } else {
             addSeriesManual(g.title);
             const created2 = seriesList[seriesList.length - 1];
             const { matched } = markImportedEpisodes(created2, g.seasons);
+            applyImportDate(created2, g);
             totalEpisodesMarked += matched;
           }
         } else {
@@ -1515,6 +1534,7 @@ async function runImport(){
                 }
               });
               const { matched } = markImportedEpisodes(existing, g.seasons);
+              applyImportDate(existing, g);
               totalEpisodesMarked += matched;
               merged++;
             } else {
@@ -1524,6 +1544,7 @@ async function runImport(){
               const meta = extractMeta(details);
               const newSeries = { id: uid(), title: details.name, tmdbId: details.id, seasons, ...meta };
               const { matched } = markImportedEpisodes(newSeries, g.seasons);
+              applyImportDate(newSeries, g);
               totalEpisodesMarked += matched;
               seriesList.push(newSeries);
               created++;
@@ -1535,6 +1556,7 @@ async function runImport(){
             addSeriesManual(g.title);
             const created2 = seriesList[seriesList.length - 1];
             markImportedEpisodes(created2, g.seasons);
+            applyImportDate(created2, g);
           }
         }
       }
