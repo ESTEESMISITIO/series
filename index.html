@@ -514,7 +514,7 @@
   .bar-fill{height:100%;background:linear-gradient(90deg,var(--teal),var(--gold));border-radius:5px;}
   .bar-val{width:32px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);flex-shrink:0;}
 
-  footer{text-align:center;color:var(--muted);font-size:12px;margin-top:20px;font-family:'JetBrains Mono',monospace;}
+  footer{text-align:center;color:var(--muted);font-size:12px;margin-top:20px;font-family:'JetBrains Mono',monospace;line-height:1.6;}
 
   /* ---- bottom nav ---- */
   .bottom-nav{
@@ -763,7 +763,10 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
     </div>
   </section>
 
-  <footer>tus series se guardan en tu cuenta y se sincronizan automáticamente en la nube</footer>
+  <footer>
+    tus series se guardan en tu cuenta y se sincronizan automáticamente en la nube<br>
+    <span style="opacity:.75;">Este producto usa la API de TMDB pero no está respaldado ni certificado por TMDB.</span>
+  </footer>
 </div>
 
 <nav class="bottom-nav">
