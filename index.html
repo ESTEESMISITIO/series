@@ -404,10 +404,10 @@
 
   .status-badge{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 9px;border-radius:20px;margin-top:4px;}
   .status-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
-  .status-badge.viendo{color:var(--teal);background:#3A1B5A24;}
-  .status-badge.pendiente{color:var(--gold);background:var(--gold-soft);}
-  .status-badge.completada{color:var(--green);background:#B23A7A24;}
-  .status-badge.sindatos{color:var(--muted);background:#6B5A781a;}
+  .status-badge.viendo{color:#DCC1F2;background:#ffffff1f;}
+  .status-badge.pendiente{color:#F1B24A;background:#ffffff1f;}
+  .status-badge.completada{color:#F4AFD1;background:#ffffff1f;}
+  .status-badge.sindatos{color:#d8d2e3;background:#ffffff14;}
 
   .progress-track{height:6px;background:var(--bg-soft);border-radius:4px;overflow:hidden;margin:10px 0 16px;}
   .progress-fill{height:100%;background:linear-gradient(90deg,#8a4f9e,var(--gold));border-radius:4px;transition:width .25s;}
@@ -415,6 +415,8 @@
   .seasons{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
   .season-tab{font-family:'JetBrains Mono',monospace;font-size:12px;padding:6px 10px;border-radius:7px;background:var(--bg-soft);color:var(--muted);border:1px solid var(--line);cursor:pointer;}
   .season-tab.active{background:var(--gold-soft);color:var(--gold);border-color:var(--gold);}
+  .season-tab.done{color:var(--progress-green);border-color:#4f8a5855;}
+  .season-tab.done.active{background:#4f8a5822;color:var(--progress-green);border-color:var(--progress-green);}
   .season-tab.add{color:var(--teal);border-style:dashed;}
 
   .episodes{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:6px;}
@@ -1111,7 +1113,7 @@ function renderDetail(seriesId){
     .map(se => {
       const w = se.watched.filter(Boolean).length;
       const done = w === se.watched.length && se.watched.length > 0;
-      return `<button class="season-tab ${se.number === activeSeason ? 'active' : ''}" onclick="setActiveSeason('${s.id}', ${se.number})">T${se.number}${done ? ' ✓' : ''}</button>`;
+      return `<button class="season-tab ${se.number === activeSeason ? 'active' : ''} ${done ? 'done' : ''}" onclick="setActiveSeason('${s.id}', ${se.number})">T${se.number}${done ? ' ✓' : ''}</button>`;
     })
     .join('') + `<button class="season-tab add" onclick="addSeason('${s.id}')">+ temporada</button>`;
 
