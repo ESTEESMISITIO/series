@@ -408,6 +408,7 @@
   .status-badge.pendiente{color:#F1B24A;background:#ffffff1f;}
   .status-badge.completada{color:#F4AFD1;background:#ffffff1f;}
   .status-badge.sindatos{color:#d8d2e3;background:#ffffff14;}
+  .status-badge.abandonada{color:#c9c2b8;background:#ffffff14;}
 
   .progress-track{height:6px;background:var(--bg-soft);border-radius:4px;overflow:hidden;margin:10px 0 16px;}
   .progress-fill{height:100%;background:linear-gradient(90deg,#8a4f9e,var(--gold));border-radius:4px;transition:width .25s;}
@@ -933,6 +934,12 @@ function removeSeries(id){
   saveData();
   render();
 }
+function toggleAbandoned(seriesId){
+  const s = seriesList.find(x => x.id === seriesId);
+  s.abandoned = !s.abandoned;
+  saveData();
+  render();
+}
 function addSeason(seriesId){
   const s = seriesList.find(x => x.id === seriesId);
   const count = prompt('¿Cuántos capítulos tiene esta temporada?', '10');
@@ -968,14 +975,14 @@ function computeProgress(s){
   return { total, watched };
 }
 function computeStatus(s){
+  if(s.abandoned) return 'abandonada';
   const { total, watched } = computeProgress(s);
   if(total === 0) return 'sindatos';
   if(watched === 0) return 'pendiente';
   if(watched === total) return 'completada';
   return 'viendo';
 }
-const STATUS_LABEL = { viendo: 'Viendo', pendiente: 'Pendiente', completada: 'Completada', sindatos: 'Sin capítulos' };
-const STATUS_ORDER = { viendo: 0, pendiente: 1, completada: 2, sindatos: 3 };
+const STATUS_LABEL = { viendo: 'Viendo', pendiente: 'Pendiente', completada: 'Completada', sindatos: 'Sin capítulos', abandonada: 'Abandonada' };
 function findNext(s){
   const sortedSeasons = [...s.seasons].sort((a,b) => a.number - b.number);
   for(const se of sortedSeasons){
@@ -1053,13 +1060,15 @@ function render(){
   const sinVer = seriesList.filter(s => computeStatus(s) === 'pendiente').sort((a,b) => a.title.localeCompare(b.title));
   const completadas = seriesList.filter(s => computeStatus(s) === 'completada').sort((a,b) => a.title.localeCompare(b.title));
   const sinDatos = seriesList.filter(s => computeStatus(s) === 'sindatos').sort((a,b) => a.title.localeCompare(b.title));
+  const abandonadas = seriesList.filter(s => computeStatus(s) === 'abandonada').sort((a,b) => a.title.localeCompare(b.title));
 
   const sections = [
     { label: 'Ver a continuación', items: continuar },
     { label: 'Sin ver por un tiempo', items: sinVerTiempo },
     { label: 'Sin ver', items: sinVer },
     { label: 'Completadas', items: completadas },
-    { label: 'Sin capítulos cargados', items: sinDatos }
+    { label: 'Sin capítulos cargados', items: sinDatos },
+    { label: 'Abandonadas', items: abandonadas }
   ];
 
   let html = '';
@@ -1103,7 +1112,8 @@ function renderDetail(seriesId){
   const status = computeStatus(s);
 
   let statusText;
-  if(status === 'sindatos') statusText = 'Sin capítulos cargados';
+  if(status === 'abandonada') statusText = 'Abandonada';
+  else if(status === 'sindatos') statusText = 'Sin capítulos cargados';
   else if(status === 'viendo' && next) statusText = `Sigues en T${next.season} · Ep ${next.episode}`;
   else if(status === 'completada') statusText = `Completa — ${watched}/${total}`;
   else statusText = `Pendiente · ${total} capítulos`;
@@ -1134,9 +1144,10 @@ function renderDetail(seriesId){
           <p class="detail-title">${escapeHtml(s.title)}</p>
           ${genresHtml}
           <span class="status-badge ${status}"><span class="dot"></span>${statusText}</span>
-          ${total ? `<div class="progress-track" style="margin:10px 0 0;"><div class="progress-fill" style="width:${pct}%;background:${status === 'completada' ? 'var(--progress-green)' : 'linear-gradient(90deg,#8a4f9e,var(--gold))'}"></div></div>` : ''}
+          ${total ? `<div class="progress-track" style="margin:10px 0 0;"><div class="progress-fill" style="width:${pct}%;background:${status === 'completada' ? 'var(--progress-green)' : status === 'abandonada' ? 'var(--muted)' : 'linear-gradient(90deg,#8a4f9e,var(--gold))'}"></div></div>` : ''}
           <div class="detail-actions">
             ${syncBtn}
+            <button class="btn btn-ghost" onclick="toggleAbandoned('${s.id}')">${s.abandoned ? '↩ Quitar de abandonadas' : '🚫 Marcar como abandonada'}</button>
             <button class="btn btn-ghost" onclick="removeSeries('${s.id}')">🗑 Eliminar</button>
           </div>
         </div>
@@ -1894,7 +1905,9 @@ document.getElementById('loginPassword').addEventListener('keydown', e => {
 
 // ---------------- Dashboard (Inicio) ----------------
 function progressColor(status){
-  return status === 'completada' ? 'var(--progress-green)' : 'var(--gold)';
+  if(status === 'completada') return 'var(--progress-green)';
+  if(status === 'abandonada') return 'var(--muted)';
+  return 'var(--gold)';
 }
 
 function renderPosterCard(s){
@@ -1905,7 +1918,8 @@ function renderPosterCard(s){
   const poster = s.poster ? `<img class="continue-poster" src="${s.poster}" alt="">` : `<div class="continue-poster"></div>`;
 
   let caption;
-  if(status === 'completada') caption = '✓ Completa';
+  if(status === 'abandonada') caption = 'Abandonada';
+  else if(status === 'completada') caption = '✓ Completa';
   else if(status === 'viendo' && next) caption = `T${next.season} · Ep ${next.episode}`;
   else if(status === 'pendiente') caption = `${prog.total} capítulos`;
   else caption = '';
