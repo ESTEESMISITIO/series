@@ -28,6 +28,7 @@
     --text:#120A1F;
     --muted:#6B5A78;
     --danger:#8F3A3A;
+    --progress-green:#4f8a58;
     --nav-h:64px;
   }
   *{box-sizing:border-box;}
@@ -961,6 +962,8 @@ function renderStats(){
 
 let openSeriesId = null;
 
+const STALE_DAYS = 21; // sin actividad por más de esto = "sin ver por un tiempo"
+
 function render(){
   renderStats();
   if(document.getElementById('tab-home').classList.contains('active')) renderDashboard();
@@ -989,19 +992,36 @@ function render(){
     return;
   }
 
-  const groups = [
-    { key: 'viendo', label: 'Ver a continuación' },
-    { key: 'pendiente', label: 'Pendientes' },
-    { key: 'completada', label: 'Completadas' },
-    { key: 'sindatos', label: 'Sin capítulos cargados' }
+  const now = Date.now();
+  const staleMs = STALE_DAYS * 24 * 60 * 60 * 1000;
+  const viendoAll = seriesList.filter(s => computeStatus(s) === 'viendo');
+
+  const continuar = viendoAll
+    .filter(s => s.lastActivity && (now - s.lastActivity) <= staleMs)
+    .sort((a, b) => (b.lastActivity || 0) - (a.lastActivity || 0));
+
+  const sinVerTiempo = viendoAll
+    .filter(s => !(s.lastActivity && (now - s.lastActivity) <= staleMs))
+    .sort((a, b) => (a.lastActivity || 0) - (b.lastActivity || 0));
+
+  const sinVer = seriesList.filter(s => computeStatus(s) === 'pendiente').sort((a,b) => a.title.localeCompare(b.title));
+  const completadas = seriesList.filter(s => computeStatus(s) === 'completada').sort((a,b) => a.title.localeCompare(b.title));
+  const sinDatos = seriesList.filter(s => computeStatus(s) === 'sindatos').sort((a,b) => a.title.localeCompare(b.title));
+
+  const sections = [
+    { label: 'Ver a continuación', items: continuar },
+    { label: 'Sin ver por un tiempo', items: sinVerTiempo },
+    { label: 'Sin ver', items: sinVer },
+    { label: 'Completadas', items: completadas },
+    { label: 'Sin capítulos cargados', items: sinDatos }
   ];
+
   let html = '';
-  groups.forEach(g => {
-    const items = seriesList.filter(s => computeStatus(s) === g.key).sort((a,b) => a.title.localeCompare(b.title));
+  sections.forEach(({ label, items }) => {
     if(items.length === 0) return;
     html += `
       <div class="cat-section">
-        <div class="dash-section-title"><span>${g.label} (${items.length})</span></div>
+        <div class="dash-section-title"><span>${label} (${items.length})</span></div>
         <div class="continue-row">${items.map(s => renderPosterCard(s)).join('')}</div>
       </div>`;
   });
@@ -1068,7 +1088,7 @@ function renderDetail(seriesId){
           <p class="detail-title">${escapeHtml(s.title)}</p>
           ${genresHtml}
           <span class="status-badge ${status}"><span class="dot"></span>${statusText}</span>
-          ${total ? `<div class="progress-track" style="margin:10px 0 0;"><div class="progress-fill" style="width:${pct}%"></div></div>` : ''}
+          ${total ? `<div class="progress-track" style="margin:10px 0 0;"><div class="progress-fill" style="width:${pct}%;background:${status === 'completada' ? 'var(--progress-green)' : 'linear-gradient(90deg,#8a4f9e,var(--gold))'}"></div></div>` : ''}
           <div class="detail-actions">
             ${syncBtn}
             <button class="btn btn-ghost" onclick="removeSeries('${s.id}')">🗑 Eliminar</button>
@@ -1792,6 +1812,10 @@ document.getElementById('loginPassword').addEventListener('keydown', e => {
 });
 
 // ---------------- Dashboard (Inicio) ----------------
+function progressColor(status){
+  return status === 'completada' ? 'var(--progress-green)' : 'var(--gold)';
+}
+
 function renderPosterCard(s){
   const next = findNext(s);
   const prog = computeProgress(s);
@@ -1810,7 +1834,7 @@ function renderPosterCard(s){
     <div class="continue-body">
       <p class="continue-title">${escapeHtml(s.title)}</p>
       <span class="continue-next">${caption}</span>
-      ${prog.total ? `<div class="continue-mini-track"><div class="continue-mini-fill" style="width:${pct}%"></div></div>` : ''}
+      ${prog.total ? `<div class="continue-mini-track"><div class="continue-mini-fill" style="width:${pct}%;background:${progressColor(status)}"></div></div>` : ''}
     </div>
   </div>`;
 }
@@ -1835,11 +1859,11 @@ function renderDashboard(){
     <div class="stat-chip"><div class="stat-num green">${completed}</div><div class="stat-label">completadas</div></div>
   `;
 
-  // seguir viendo: solo lo más reciente en actividad dentro de la plataforma
+  // seguir viendo: solo las 5 últimas con actividad real en la plataforma
   const enCurso = seriesList
-    .filter(s => computeStatus(s) === 'viendo')
+    .filter(s => computeStatus(s) === 'viendo' && s.lastActivity)
     .sort((a, b) => (b.lastActivity || 0) - (a.lastActivity || 0))
-    .slice(0, 8);
+    .slice(0, 5);
 
   const contCont = document.getElementById('continueContainer');
   if(enCurso.length === 0){
