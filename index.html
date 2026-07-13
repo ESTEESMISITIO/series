@@ -644,7 +644,7 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
 
       <div class="profile-section">
         <div class="profile-section-title">Respaldo de tus series</div>
-        <p>Descargá una copia de todo lo que tenés cargado, por si algo sale mal alguna vez.</p>
+        <p>Descargá una copia de todo lo que tienes cargado, por si algo sale mal alguna vez.</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-ghost btn-sm" id="exportJsonBtn">
             <svg class="inline-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -702,7 +702,7 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
           <button class="btn btn-ghost btn-sm" id="cancelImportBtn">Cerrar</button>
         </div>
         <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px;">
-          <p class="sub" style="margin-bottom:8px;">Si algo salió mal con una importación anterior (series duplicadas, o querés volver a empezar):</p>
+          <p class="sub" style="margin-bottom:8px;">Si algo salió mal con una importación anterior (series duplicadas, o quieres volver a empezar):</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn btn-ghost btn-sm" id="dedupeBtn"><svg class="inline-icon" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Fusionar duplicados</button>
             <button class="btn btn-ghost btn-sm" id="resetImportBtn"><svg class="inline-icon" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>Empezar de cero con el importado</button>
@@ -852,7 +852,7 @@ function refreshKeyStatus(){
     el.textContent = 'Key guardada ✓ — el buscador ya funciona.';
     el.className = 'key-status ok';
   } else {
-    el.textContent = 'Sin key todavía: podés agregar series a mano, pero buscador, calendario y descubrir no van a funcionar hasta que pegues una.';
+    el.textContent = 'Sin key todavía: puedes agregar series a mano, pero buscador, calendario y descubrir no van a funcionar hasta que pegues una.';
     el.className = 'key-status missing';
   }
 }
@@ -965,6 +965,9 @@ async function fetchSeasonEpisodes(tmdbId, seasonNumber){
 }
 
 function addSeriesFromTMDB(details){
+  const existing = seriesList.find(s => s.tmdbId === details.id);
+  if(existing) return { series: existing, wasNew: false };
+
   const seasons = (details.seasons || [])
     .filter(se => se.season_number > 0 && se.episode_count > 0)
     .map(se => ({ number: se.season_number, watched: new Array(se.episode_count).fill(false) }));
@@ -974,6 +977,7 @@ function addSeriesFromTMDB(details){
   activeSeasonBySeries[s.id] = null;
   saveData();
   render();
+  return { series: s, wasNew: true };
 }
 function pushImportedManualSeries(title){
   const s = { id: uid(), title: title.trim(), poster: null, tmdbId: null, seasons: [], genres: [], runtime: null, nextEpisode: null, tmdbStatus: '' };
@@ -1369,21 +1373,22 @@ async function onTitleInput(e){
   const query = e.target.value.trim();
   clearTimeout(acTimer);
   if(query.length < 2){ closeSuggestions(); return; }
-  if(!apiKey){ openSuggestions(`<div class="sugg-status">Todavía no pegaste tu TMDB API key (ícono de perfil arriba). Podés escribir el título y usar "Agregar manual".</div>`); return; }
+  if(!apiKey){ openSuggestions(`<div class="sugg-status">Todavía no pegaste tu TMDB API key (ícono de perfil arriba). Puedes escribir el título y usar "Agregar manual".</div>`); return; }
   openSuggestions(`<div class="sugg-status">Buscando en TMDB...</div>`);
   acTimer = setTimeout(async () => {
     acLastQuery = query;
     const res = await tmdbSearchShows(query);
     if(query !== acLastQuery) return;
     if(res.error === 'bad-key'){ openSuggestions(`<div class="sugg-status">La API key no es válida. Revisala en tu perfil.</div>`); return; }
-    if(res.error){ openSuggestions(`<div class="sugg-status">No se pudo conectar con TMDB (${escapeHtml(res.error)}). Podés agregar la serie manual.</div>`); return; }
+    if(res.error){ openSuggestions(`<div class="sugg-status">No se pudo conectar con TMDB (${escapeHtml(res.error)}). Puedes agregar la serie manual.</div>`); return; }
     if(res.results.length === 0){ openSuggestions(`<div class="sugg-status">Sin coincidencias para "${escapeHtml(query)}". Probá "Agregar manual".</div>`); return; }
     const html = res.results.map(show => {
       const year = (show.first_air_date || '').slice(0,4);
       const poster = show.poster_path ? TMDB_IMG + show.poster_path : '';
+      const already = seriesList.some(s => s.tmdbId === show.id);
       return `<div class="sugg-item" onmousedown="chooseSuggestion(${show.id})">
         ${poster ? `<img class="sugg-poster" src="${poster}" alt="">` : `<div class="sugg-poster"></div>`}
-        <div class="sugg-text"><span class="sugg-title">${escapeHtml(show.name)}</span><span class="sugg-meta">${escapeHtml(year)}</span></div>
+        <div class="sugg-text"><span class="sugg-title">${escapeHtml(show.name)}</span><span class="sugg-meta">${escapeHtml(year)}${already ? ' · ya la tienes' : ''}</span></div>
       </div>`;
     }).join('');
     openSuggestions(html);
@@ -1395,8 +1400,13 @@ async function chooseSuggestion(tmdbId){
   const details = await tmdbGetShowDetails(tmdbId);
   document.getElementById('addForm').classList.remove('open');
   document.getElementById('newSeriesTitle').value = '';
-  if(details) addSeriesFromTMDB(details);
-  else alert('No se pudo cargar el detalle de la serie. Probá de nuevo.');
+  if(!details){ alert('No se pudo cargar el detalle de la serie. Probá de nuevo.'); return; }
+  const { series, wasNew } = addSeriesFromTMDB(details);
+  if(!wasNew){
+    alert(`Ya tienes "${series.title}" en tu bitácora. Te lleva a su ficha.`);
+    switchTab('series');
+    openDetail(series.id);
+  }
 }
 document.getElementById('newSeriesTitle').addEventListener('input', onTitleInput);
 document.addEventListener('click', (e) => { if(!e.target.closest('.autocomplete-wrap')) closeSuggestions(); });
@@ -1475,7 +1485,7 @@ document.getElementById('resetImportBtn').addEventListener('click', () => {
   if(!confirm(
     `Esto va a borrar ${withoutActivity} serie(s) que vinieron solo del historial importado y nunca tocaste en la app.\n\n` +
     `Se van a conservar ${withActivity} serie(s) donde marcaste o desmarcaste algo directamente acá.\n\n` +
-    `Después podés volver a correr "Importar historial" para reconstruir todo de nuevo, sin duplicados.\n\n` +
+    `Después puedes volver a correr "Importar historial" para reconstruir todo de nuevo, sin duplicados.\n\n` +
     `¿Continuar?`
   )) return;
   const removed = resetToPlatformOnly();
@@ -1773,7 +1783,7 @@ function renderCalendar(){
   const container = document.getElementById('calendarContainer');
   const withDates = seriesList.filter(s => s.nextEpisode && s.nextEpisode.air_date);
   if(withDates.length === 0){
-    container.innerHTML = `<div class="empty"><strong>Nada programado todavía</strong>Agregá series con TMDB (no manuales) para ver sus próximos estrenos, o tocá "Actualizar" si ya las tenés cargadas.</div>`;
+    container.innerHTML = `<div class="empty"><strong>Nada programado todavía</strong>Agregá series con TMDB (no manuales) para ver sus próximos estrenos, o tocá "Actualizar" si ya las tienes cargadas.</div>`;
     return;
   }
   const today = new Date(); today.setHours(0,0,0,0);
@@ -1832,7 +1842,7 @@ function renderDiscover(){
     const poster = show.poster_path ? TMDB_IMG + show.poster_path : '';
     const year = (show.first_air_date || '').slice(0,4);
     return `<div class="disc-card">
-      <button class="disc-add ${already ? 'added' : ''}" onclick="quickAdd(${show.id}, this)" ${already ? 'disabled' : ''} title="${already ? 'Ya la tenés' : 'Agregar'}">${already ? '✓' : '+'}</button>
+      <button class="disc-add ${already ? 'added' : ''}" onclick="quickAdd(${show.id}, this)" ${already ? 'disabled' : ''} title="${already ? 'Ya la tienes' : 'Agregar'}">${already ? '✓' : '+'}</button>
       ${poster ? `<img class="disc-poster" src="${poster}" alt="">` : `<div class="disc-poster"></div>`}
       <div class="disc-body">
         <p class="disc-title">${escapeHtml(show.name)}</p>
@@ -1845,8 +1855,9 @@ async function quickAdd(tmdbId, btnEl){
   btnEl.textContent = '…'; btnEl.disabled = true;
   const details = await tmdbGetShowDetails(tmdbId);
   if(details){
-    addSeriesFromTMDB(details);
+    const { wasNew } = addSeriesFromTMDB(details);
     btnEl.textContent = '✓'; btnEl.classList.add('added');
+    if(!wasNew) btnEl.title = 'Ya la tienes en tu bitácora';
   } else {
     btnEl.textContent = '+'; btnEl.disabled = false;
     alert('No se pudo agregar. Probá de nuevo.');
