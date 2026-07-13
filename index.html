@@ -455,18 +455,18 @@
   .bottom-nav{
     position:fixed;bottom:0;left:0;right:0;
     height:var(--nav-h);
-    background:var(--bg-soft);
-    border-top:1px solid var(--line);
+    background:#3A1B5A;
+    border-top:1px solid #2c1444;
     display:flex;
     z-index:50;
   }
   .nav-btn{
-    flex:1;background:none;border:none;color:var(--muted);
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    flex:1;background:none;border:none;color:#F7F1E3;opacity:.55;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
     cursor:pointer;font-family:'Inter',sans-serif;font-size:10.5px;
   }
-  .nav-btn .nav-icon{font-size:19px;line-height:1;}
-  .nav-btn.active{color:var(--gold);}
+  .nav-btn .nav-icon{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .nav-btn.active{color:#F1B24A;opacity:1;}
 </style>
 </head>
 <body>
@@ -661,11 +661,26 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
 </div>
 
 <nav class="bottom-nav">
-  <button class="nav-btn active" data-tab="home" onclick="switchTab('home')"><span class="nav-icon">🏠</span>Inicio</button>
-  <button class="nav-btn" data-tab="series" onclick="switchTab('series')"><span class="nav-icon">📚</span>Mis series</button>
-  <button class="nav-btn" data-tab="calendar" onclick="switchTab('calendar')"><span class="nav-icon">📅</span>Calendario</button>
-  <button class="nav-btn" data-tab="discover" onclick="switchTab('discover')"><span class="nav-icon">🧭</span>Descubrir</button>
-  <button class="nav-btn" data-tab="stats" onclick="switchTab('stats')"><span class="nav-icon">📊</span>Estadísticas</button>
+  <button class="nav-btn active" data-tab="home" onclick="switchTab('home')">
+    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Inicio
+  </button>
+  <button class="nav-btn" data-tab="series" onclick="switchTab('series')">
+    <svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    Mis series
+  </button>
+  <button class="nav-btn" data-tab="calendar" onclick="switchTab('calendar')">
+    <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    Calendario
+  </button>
+  <button class="nav-btn" data-tab="discover" onclick="switchTab('discover')">
+    <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+    Descubrir
+  </button>
+  <button class="nav-btn" data-tab="stats" onclick="switchTab('stats')">
+    <svg class="nav-icon" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    Estadísticas
+  </button>
 </nav>
 
 <script>
