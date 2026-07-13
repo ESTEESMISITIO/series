@@ -825,14 +825,14 @@ function addSeriesFromTMDB(details){
     .filter(se => se.season_number > 0 && se.episode_count > 0)
     .map(se => ({ number: se.season_number, watched: new Array(se.episode_count).fill(false) }));
   const meta = extractMeta(details);
-  const s = { id: uid(), title: details.name, tmdbId: details.id, seasons, ...meta };
+  const s = { id: uid(), title: details.name, tmdbId: details.id, seasons, lastActivity: Date.now(), ...meta };
   seriesList.push(s);
   activeSeasonBySeries[s.id] = null;
   saveData();
   render();
 }
 function addSeriesManual(title){
-  const s = { id: uid(), title: title.trim(), poster: null, tmdbId: null, seasons: [], genres: [], runtime: null, nextEpisode: null, tmdbStatus: '' };
+  const s = { id: uid(), title: title.trim(), poster: null, tmdbId: null, seasons: [], genres: [], runtime: null, nextEpisode: null, tmdbStatus: '', lastActivity: Date.now() };
   seriesList.push(s);
   activeSeasonBySeries[s.id] = null;
   saveData();
@@ -894,6 +894,7 @@ function toggleEpisode(seriesId, seasonNumber, epIndex){
   const s = seriesList.find(x => x.id === seriesId);
   const se = s.seasons.find(x => x.number === seasonNumber);
   se.watched[epIndex] = !se.watched[epIndex];
+  s.lastActivity = Date.now();
   saveData();
   render();
 }
@@ -1125,6 +1126,7 @@ function toggleWholeSeason(seriesId, seasonNumber){
   const se = s.seasons.find(x => x.number === seasonNumber);
   const allWatched = se.watched.every(Boolean);
   se.watched = se.watched.map(() => !allWatched);
+  s.lastActivity = Date.now();
   saveData();
   render();
 }
@@ -1804,8 +1806,11 @@ function renderDashboard(){
     <div class="stat-chip"><div class="stat-num violet">${completed}</div><div class="stat-label">completadas</div></div>
   `;
 
-  // seguir viendo
-  const enCurso = seriesList.filter(s => computeStatus(s) === 'viendo').slice(0, 12);
+  // seguir viendo: solo lo más reciente en actividad dentro de la plataforma
+  const enCurso = seriesList
+    .filter(s => computeStatus(s) === 'viendo')
+    .sort((a, b) => (b.lastActivity || 0) - (a.lastActivity || 0))
+    .slice(0, 8);
 
   const contCont = document.getElementById('continueContainer');
   if(enCurso.length === 0){
