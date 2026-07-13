@@ -17,17 +17,17 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
-    --bg:#121217;
-    --bg-soft:#181820;
-    --card:#1c1c26;
-    --line:#2b2b36;
-    --gold:#e8a33d;
-    --gold-soft:#e8a33d33;
-    --teal:#4fc3bd;
-    --violet:#a78bfa;
-    --text:#ece9e2;
-    --muted:#8d8d99;
-    --danger:#d9694f;
+    --bg:#17181a;
+    --bg-soft:#1d1f21;
+    --card:#212325;
+    --line:#34373a;
+    --gold:#cf9f5f;
+    --gold-soft:#cf9f5f2e;
+    --teal:#6fa89f;
+    --green:#7fad82;
+    --text:#e4e1d7;
+    --muted:#98958c;
+    --danger:#bf7a63;
     --nav-h:64px;
   }
   *{box-sizing:border-box;}
@@ -192,16 +192,16 @@
   .stats-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
   .stat-chip{flex:1 1 120px;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;padding:10px 14px;}
   .stat-num{font-family:'Bricolage Grotesque',serif;font-size:22px;font-weight:700;line-height:1;}
-  .stat-num.gold{color:var(--gold);} .stat-num.teal{color:var(--teal);} .stat-num.violet{color:var(--violet);}
+  .stat-num.gold{color:var(--gold);} .stat-num.teal{color:var(--teal);} .stat-num.green{color:var(--green);}
   .stat-label{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-top:2px;}
 
   .filter-row{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap;}
   .filter-chip{font-family:'JetBrains Mono',monospace;font-size:12px;padding:7px 12px;border-radius:20px;background:var(--bg-soft);color:var(--muted);border:1px solid var(--line);cursor:pointer;display:flex;align-items:center;gap:6px;}
   .filter-chip .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
   .filter-chip.active{color:var(--text);border-color:var(--text);background:#ffffff0d;}
-  .filter-chip[data-status="viendo"].active{color:var(--teal);border-color:var(--teal);background:#4fc3bd1a;}
+  .filter-chip[data-status="viendo"].active{color:var(--teal);border-color:var(--teal);background:#6fa89f1f;}
   .filter-chip[data-status="pendiente"].active{color:var(--gold);border-color:var(--gold);background:var(--gold-soft);}
-  .filter-chip[data-status="completada"].active{color:var(--violet);border-color:var(--violet);background:#a78bfa1a;}
+  .filter-chip[data-status="completada"].active{color:var(--green);border-color:var(--green);background:#7fad821f;}
 
   .add-form{display:none;background:var(--bg-soft);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:20px;gap:10px;flex-wrap:wrap;}
   .add-form.open{display:flex;}
@@ -265,7 +265,7 @@
     font-family:'JetBrains Mono',monospace;
     font-size:10px;color:var(--gold);
   }
-  .grid-next.done{color:var(--violet);}
+  .grid-next.done{color:var(--green);}
   .grid-next.pending{color:var(--muted);}
   .grid-progress{
     position:absolute;left:0;right:0;bottom:0;
@@ -278,7 +278,7 @@
     display:flex;align-items:center;justify-content:center;
     font-size:11px;font-weight:700;
   }
-  .grid-badge.completada{background:var(--violet);color:#fff;}
+  .grid-badge.completada{background:var(--green);color:#fff;}
 
   /* ---- Vista de detalle de serie ---- */
   .detail-view{display:none;}
@@ -334,7 +334,7 @@
     transition:border-color .12s, background .12s;
   }
   .ep-row:hover{border-color:var(--gold);}
-  .ep-row.watched{background:#e8a33d0f;border-color:#e8a33d40;}
+  .ep-row.watched{background:#cf9f5f12;border-color:#cf9f5f45;}
   .ep-check{
     width:22px;height:22px;border-radius:6px;
     border:1.5px solid var(--line);
@@ -380,14 +380,14 @@
   .ticket-genres{font-size:11px;color:var(--muted);margin-top:2px;}
   .ticket-actions{display:flex;gap:4px;flex-shrink:0;}
   .icon-btn{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:4px 6px;border-radius:6px;}
-  .icon-btn:hover{color:var(--danger);background:#d9694f14;}
-  .icon-btn.sync:hover{color:var(--teal);background:#4fc3bd14;}
+  .icon-btn:hover{color:var(--danger);background:#bf7a6316;}
+  .icon-btn.sync:hover{color:var(--teal);background:#6fa89f16;}
 
   .status-badge{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 9px;border-radius:20px;margin-top:4px;}
   .status-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
-  .status-badge.viendo{color:var(--teal);background:#4fc3bd1a;}
+  .status-badge.viendo{color:var(--teal);background:#6fa89f1f;}
   .status-badge.pendiente{color:var(--gold);background:var(--gold-soft);}
-  .status-badge.completada{color:var(--violet);background:#a78bfa1a;}
+  .status-badge.completada{color:var(--green);background:#7fad821f;}
   .status-badge.sindatos{color:var(--muted);background:#8d8d991a;}
 
   .progress-track{height:6px;background:var(--bg-soft);border-radius:4px;overflow:hidden;margin:10px 0 16px;}
@@ -432,7 +432,7 @@
     font-size:16px;font-weight:700;cursor:pointer;
     display:flex;align-items:center;justify-content:center;
   }
-  .disc-add.added{background:var(--violet);color:#fff;font-size:13px;}
+  .disc-add.added{background:var(--green);color:#fff;font-size:13px;}
 
   /* ---- Stats tab ---- */
   .stat-block{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px;}
@@ -937,7 +937,7 @@ function renderStats(){
     <div class="stat-chip"><div class="stat-num">${totalSeries}</div><div class="stat-label">series</div></div>
     <div class="stat-chip"><div class="stat-num gold">${watchedEpisodes}</div><div class="stat-label">episodios vistos</div></div>
     <div class="stat-chip"><div class="stat-num teal">${watching}</div><div class="stat-label">viendo ahora</div></div>
-    <div class="stat-chip"><div class="stat-num violet">${completed}</div><div class="stat-label">completadas</div></div>
+    <div class="stat-chip"><div class="stat-num green">${completed}</div><div class="stat-label">completadas</div></div>
   `;
 }
 
@@ -1500,7 +1500,7 @@ function renderStats2(){
   document.getElementById('bigStatsRow').innerHTML = `
     <div class="big-stat"><div class="num" style="color:var(--gold)">${watchedEpisodes}</div><div class="lbl">episodios</div></div>
     <div class="big-stat"><div class="num" style="color:var(--teal)">${totalHours}</div><div class="lbl">horas estimadas</div></div>
-    <div class="big-stat"><div class="num" style="color:var(--violet)">${seriesList.length}</div><div class="lbl">series en total</div></div>
+    <div class="big-stat"><div class="num" style="color:var(--green)">${seriesList.length}</div><div class="lbl">series en total</div></div>
   `;
 
   const genres = Object.entries(genreCount).sort((a,b) => b[1]-a[1]).slice(0,6);
@@ -1514,7 +1514,7 @@ function renderStats2(){
         </div>`).join('')
     : `<p class="sub">Agregá series desde TMDB para ver sus géneros acá.</p>`;
 
-  const statusData = [['Viendo', watching, 'var(--teal)'], ['Pendientes', pending, 'var(--gold)'], ['Completadas', completed, 'var(--violet)']];
+  const statusData = [['Viendo', watching, 'var(--teal)'], ['Pendientes', pending, 'var(--gold)'], ['Completadas', completed, 'var(--green)']];
   const maxStatus = Math.max(1, ...statusData.map(x => x[1]));
   document.getElementById('statusBars').innerHTML = statusData.map(([label, count, color]) => `
     <div class="bar-row">
@@ -1803,7 +1803,7 @@ function renderDashboard(){
   document.getElementById('dashStats').innerHTML = `
     <div class="stat-chip"><div class="stat-num gold">${watchedEpisodes}</div><div class="stat-label">episodios vistos</div></div>
     <div class="stat-chip"><div class="stat-num teal">${watching}</div><div class="stat-label">viendo ahora</div></div>
-    <div class="stat-chip"><div class="stat-num violet">${completed}</div><div class="stat-label">completadas</div></div>
+    <div class="stat-chip"><div class="stat-num green">${completed}</div><div class="stat-label">completadas</div></div>
   `;
 
   // seguir viendo: solo lo más reciente en actividad dentro de la plataforma
