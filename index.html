@@ -325,6 +325,22 @@
   .detail-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
   .detail-actions .btn{padding:7px 11px;font-size:11.5px;}
 
+  .providers-block{margin-bottom:16px;}
+  .providers-label{
+    font-family:'JetBrains Mono',monospace;font-size:11px;
+    text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+    margin-bottom:8px;
+  }
+  .providers-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .provider-chip{
+    display:flex;align-items:center;gap:7px;
+    background:var(--card);border:1px solid var(--line);
+    border-radius:20px;padding:5px 12px 5px 6px;
+  }
+  .provider-logo{width:24px;height:24px;border-radius:6px;object-fit:cover;}
+  .provider-name{font-size:12px;}
+  .providers-empty{font-size:12.5px;color:var(--muted);}
+
   /* episodios con nombre y fecha */
   .ep-list{display:flex;flex-direction:column;gap:6px;}
   .ep-row{
@@ -776,6 +792,34 @@ async function tmdbSearchShows(query){
   const data = await res.json();
   return { results: (data.results || []).slice(0, 8) };
 }
+const PROVIDERS_CACHE_KEY = 'providers-cache';
+let providersCache = {};
+try{ providersCache = JSON.parse(localStorage.getItem(PROVIDERS_CACHE_KEY) || '{}'); }catch(e){ providersCache = {}; }
+function saveProvidersCache(){
+  try{ localStorage.setItem(PROVIDERS_CACHE_KEY, JSON.stringify(providersCache)); }catch(e){}
+}
+
+async function tmdbGetWatchProviders(tmdbId){
+  if(providersCache[tmdbId] !== undefined) return providersCache[tmdbId];
+  if(!apiKey || !tmdbId) return null;
+  const { url, opts } = tmdbAuthed(`${TMDB_BASE}/tv/${tmdbId}/watch/providers`);
+  try{
+    const res = await fetch(url, opts);
+    if(!res.ok) return null;
+    const data = await res.json();
+    const cl = (data.results && data.results.CL) || null;
+    const result = cl ? {
+      link: cl.link || null,
+      flatrate: (cl.flatrate || []).map(p => ({ name: p.provider_name, logo: 'https://image.tmdb.org/t/p/w45' + p.logo_path })),
+      ads: (cl.ads || []).map(p => ({ name: p.provider_name, logo: 'https://image.tmdb.org/t/p/w45' + p.logo_path })),
+      rent: (cl.rent || []).map(p => ({ name: p.provider_name, logo: 'https://image.tmdb.org/t/p/w45' + p.logo_path }))
+    } : null;
+    providersCache[tmdbId] = result;
+    saveProvidersCache();
+    return result;
+  }catch(e){ return null; }
+}
+
 async function tmdbGetShowDetails(id){
   const { url, opts } = tmdbAuthed(`${TMDB_BASE}/tv/${id}?language=es-ES`);
   const res = await fetch(url, opts);
@@ -1096,12 +1140,47 @@ function renderDetail(seriesId){
         </div>
       </div>
     </div>
+    <div class="providers-block" id="providersBlock"></div>
     <div class="seasons">${seasonsTabsHtml}</div>
     <div class="season-actions" id="seasonActions"></div>
     <div id="episodeListContainer"><div class="ep-loading">Cargando episodios...</div></div>
   `;
 
   renderEpisodeList(s, activeSeason);
+  renderProviders(s);
+}
+
+async function renderProviders(s){
+  const box = document.getElementById('providersBlock');
+  if(!box) return;
+  if(!s.tmdbId){ box.innerHTML = ''; return; }
+
+  box.innerHTML = `<div class="providers-label">Dónde verla</div><div class="providers-empty">Buscando...</div>`;
+  const data = await tmdbGetWatchProviders(s.tmdbId);
+
+  // si el usuario ya cerró o cambió de serie mientras cargaba, no pisar nada
+  if(openSeriesId !== s.id || !document.getElementById('providersBlock')) return;
+
+  const all = data ? [...data.flatrate, ...data.ads] : [];
+  if(!data || all.length === 0){
+    box.innerHTML = `
+      <div class="providers-label">Dónde verla</div>
+      <div class="providers-empty">No encontré streaming disponible en Chile para esta serie ahora mismo.</div>
+    `;
+    return;
+  }
+  const chips = all.map(p => `
+    <div class="provider-chip">
+      <img class="provider-logo" src="${p.logo}" alt="">
+      <span class="provider-name">${escapeHtml(p.name)}</span>
+    </div>`).join('');
+  const linkHtml = data.link ? `<a href="${data.link}" target="_blank" rel="noopener" class="providers-empty" style="text-decoration:underline;margin-left:6px;">ver más en TMDB</a>` : '';
+
+  box.innerHTML = `
+    <div class="providers-label">Dónde verla (Chile)</div>
+    <div class="providers-row">${chips}${linkHtml}</div>
+    <div class="providers-empty" style="margin-top:6px;">Datos de disponibilidad cortesía de JustWatch.</div>
+  `;
 }
 
 async function renderEpisodeList(s, seasonNumber){
