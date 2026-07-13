@@ -1,6 +1,6 @@
 {
-  "name": "Mi bitácora de series",
-  "short_name": "Bitácora",
+  "name": "Series Tracker",
+  "short_name": "Series Tracker",
   "description": "Registro personal de series y episodios vistos, con datos de TMDB.",
   "start_url": "./index.html",
   "scope": "./",

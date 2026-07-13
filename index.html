@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bitácora de Series</title>
+<title>Series Tracker</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#F7F1E3">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Bitácora">
+<meta name="apple-mobile-web-app-title" content="Series Tracker">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
@@ -531,7 +531,7 @@
 <div class="login-screen" id="loginScreen">
   <div class="login-card">
     <img class="login-logo" src="icons/icon-192.png" alt="">
-    <h2>Mi bitácora de series</h2>
+    <h2>Series Tracker</h2>
     <p class="login-sub" id="loginSub">Inicia sesión para sincronizar tus series en todos tus dispositivos.</p>
     <input id="loginEmail" type="email" placeholder="tu@email.com" autocomplete="username">
     <input id="loginPassword" type="password" placeholder="Contraseña" autocomplete="current-password">
@@ -548,7 +548,7 @@
   <header>
     <div>
       <p class="eyebrow">// registro personal</p>
-      <h1>Mi bitácora de series</h1>
+      <h1>Series Tracker</h1>
       <p class="sub" id="pageSub">Buscá series reales, marcá episodios y no perdás nunca en cuál vas.</p>
     </div>
     <button class="gear-btn" id="profileBtn" title="Perfil y configuración">👤</button>
@@ -770,7 +770,7 @@ const PAGE_SUBS = {
   home: 'Tu resumen de hoy.',
   series: 'Busca series reales, marca episodios y no pierdas nunca en cuál vas.',
   calendar: 'Cuándo sale el próximo capítulo de lo que estás viendo.',
-  discover: 'Series populares para sumar a tu bitácora.',
+  discover: 'Series populares para sumar a tu colección.',
   stats: 'Un vistazo a todo lo que viste.'
 };
 
@@ -1079,7 +1079,7 @@ function render(){
   const query = document.getElementById('searchInput').value.trim().toLowerCase();
 
   if(seriesList.length === 0){
-    container.innerHTML = `<div class="empty"><strong>Todavía no agregas ninguna serie</strong>Toca "+ Agregar serie" para empezar tu bitácora.</div>`;
+    container.innerHTML = `<div class="empty"><strong>Todavía no agregas ninguna serie</strong>Toca "+ Agregar serie" para empezar tu colección.</div>`;
     return;
   }
 

@@ -1,4 +1,4 @@
-# Mi bitácora de series
+# Series Tracker
 
 Tracker personal de series, inspirado en TV Time: buscá series reales (TMDB), marcá episodios vistos, mirá el calendario de próximos estrenos, descubrí tendencias y revisá tus estadísticas. Todo corre en el navegador, sin backend — los datos y tu API key quedan guardados solo en tu dispositivo (`localStorage`).
 
