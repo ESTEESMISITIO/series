@@ -545,9 +545,6 @@
     <button class="btn btn-primary" id="loginSubmitBtn">Iniciar sesión</button>
     <button class="login-toggle" id="loginModeToggle">¿No tienes cuenta? Crear una</button>
     <div class="login-error" id="loginError"></div>
-    <div class="login-skip">
-      <button id="loginSkipBtn">Usar sin sincronizar (solo este dispositivo)</button>
-    </div>
   </div>
 </div>
 
@@ -656,6 +653,15 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
           </button>
         </div>
       </div>
+
+      <div class="profile-section">
+        <div class="profile-section-title">Créditos</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+          <img src="tmdb-logo.svg" alt="TMDB" style="height:20px;" onerror="this.style.display='none'">
+          <p style="margin:0;font-size:12px;color:var(--muted);">Este producto usa la API de TMDB pero no está respaldado ni certificado por TMDB.</p>
+        </div>
+        <p style="font-size:11px;">Disponibilidad de streaming cortesía de JustWatch.</p>
+      </div>
     </div>
   </div>
 
@@ -757,7 +763,7 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
     </div>
   </section>
 
-  <footer>los datos y tu API key se guardan solo en este navegador — nada se envía a ningún servidor propio</footer>
+  <footer>tus series se guardan en tu cuenta y se sincronizan automáticamente en la nube</footer>
 </div>
 
 <nav class="bottom-nav">
@@ -2030,7 +2036,6 @@ document.getElementById('signInBtn').addEventListener('click', async () => {
 document.getElementById('signOutBtn').addEventListener('click', async () => {
   await supabaseClient.auth.signOut();
   currentSession = null;
-  localStorage.removeItem(SKIP_LOGIN_KEY);
   refreshSyncUI();
   closeProfile();
   document.getElementById('loginEmail').value = '';
@@ -2097,7 +2102,6 @@ document.getElementById('useLocalBtn').addEventListener('click', async () => {
 document.getElementById('syncNowBtn').addEventListener('click', pushToCloud);
 
 // ---------------- Pantalla de login ----------------
-const SKIP_LOGIN_KEY = 'skip_login';
 let loginMode = 'signin'; // 'signin' | 'signup'
 
 function lockApp(){ document.body.classList.add('locked'); }
@@ -2148,15 +2152,9 @@ document.getElementById('loginSubmitBtn').addEventListener('click', async () => 
     return;
   }
   currentSession = data.session;
-  localStorage.removeItem(SKIP_LOGIN_KEY);
   unlockApp();
   refreshSyncUI();
   await handlePostLoginSync();
-  renderDashboard();
-});
-document.getElementById('loginSkipBtn').addEventListener('click', () => {
-  localStorage.setItem(SKIP_LOGIN_KEY, '1');
-  unlockApp();
   renderDashboard();
 });
 document.getElementById('loginPassword').addEventListener('keydown', e => {
@@ -2270,9 +2268,8 @@ setLoginMode('signin');
     const { data } = await supabaseClient.auth.getSession();
     currentSession = data.session || null;
   }
-  const skipped = localStorage.getItem(SKIP_LOGIN_KEY) === '1';
 
-  if(syncAvailable && !currentSession && !skipped){
+  if(syncAvailable && !currentSession){
     lockApp();
   } else {
     unlockApp();
