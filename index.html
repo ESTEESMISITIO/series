@@ -57,6 +57,44 @@
   .gear-btn:hover{border-color:var(--gold);color:var(--gold);}
 
   .key-panel{background:var(--bg-soft);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:20px;display:none;}
+
+  .profile-overlay{
+    position:fixed;inset:0;
+    background:#00000066;
+    z-index:200;
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+  }
+  .profile-overlay.open{display:flex;}
+  .profile-sheet{
+    background:var(--card);
+    width:100%;max-width:520px;
+    max-height:88vh;
+    overflow-y:auto;
+    border-radius:20px 20px 0 0;
+    padding:20px;
+    border:1px solid var(--line);
+  }
+  @media (min-width: 640px){
+    .profile-overlay{align-items:center;}
+    .profile-sheet{border-radius:16px;max-height:80vh;}
+  }
+  .profile-sheet-head{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:16px;
+  }
+  .profile-sheet-head h3{
+    font-family:'Bricolage Grotesque',serif;font-size:19px;margin:0;
+  }
+  .profile-section{margin-bottom:22px;}
+  .profile-section:last-child{margin-bottom:4px;}
+  .profile-section-title{
+    font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;
+    letter-spacing:.06em;color:var(--muted);margin-bottom:10px;
+    border-bottom:1px solid var(--line);padding-bottom:8px;
+  }
+  .profile-section p{font-size:13px;color:var(--muted);line-height:1.5;margin:0 0 10px;}
   .key-panel.open{display:block;}
   .key-panel p{margin:0 0 10px;font-size:13px;color:var(--muted);line-height:1.5;}
   .key-row{display:flex;gap:8px;flex-wrap:wrap;}
@@ -513,19 +551,26 @@
       <h1>Mi bitácora de series</h1>
       <p class="sub" id="pageSub">Buscá series reales, marcá episodios y no perdás nunca en cuál vas.</p>
     </div>
-    <button class="gear-btn" id="gearBtn" title="Configurar API key">⚙</button>
-    <button class="gear-btn" id="cloudBtn" title="Sincronizar entre dispositivos">☁</button>
+    <button class="gear-btn" id="profileBtn" title="Perfil y configuración">👤</button>
   </header>
 
-  <div class="key-panel" id="syncPanel">
-    <div id="syncSetupBlock">
-      <p>
-        Para sincronizar tus series entre dispositivos necesitás un proyecto gratuito de
-        <a href="https://supabase.com" target="_blank" rel="noopener">Supabase</a>.
-        Creá uno, y en <strong>Project Settings → API</strong> copiá la <strong>Project URL</strong> y la <strong>anon public key</strong>.
-        Después, en el <strong>SQL Editor</strong> del proyecto, pegá y ejecutá esto una vez:
-      </p>
-      <pre style="background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:11px;overflow-x:auto;color:var(--text);">create table public.bitacora (
+  <div class="profile-overlay" id="profileOverlay">
+    <div class="profile-sheet">
+      <div class="profile-sheet-head">
+        <h3>Perfil</h3>
+        <button class="icon-btn" id="closeProfileBtn">✕</button>
+      </div>
+
+      <div class="profile-section">
+        <div class="profile-section-title">Sincronización entre dispositivos</div>
+        <div id="syncSetupBlock">
+          <p>
+            Para sincronizar tus series entre dispositivos necesitás un proyecto gratuito de
+            <a href="https://supabase.com" target="_blank" rel="noopener">Supabase</a>.
+            Creá uno, y en <strong>Project Settings → API</strong> copiá la <strong>Project URL</strong> y la <strong>anon public key</strong>.
+            Después, en el <strong>SQL Editor</strong> del proyecto, pegá y ejecutá esto una vez:
+          </p>
+          <pre style="background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:11px;overflow-x:auto;color:var(--text);">create table public.bitacora (
   user_id uuid references auth.users on delete cascade primary key,
   data jsonb not null default '{}'::jsonb,
   updated_at timestamptz not null default now()
@@ -534,59 +579,62 @@ alter table public.bitacora enable row level security;
 create policy "select own" on public.bitacora for select using (auth.uid() = user_id);
 create policy "insert own" on public.bitacora for insert with check (auth.uid() = user_id);
 create policy "update own" on public.bitacora for update using (auth.uid() = user_id);</pre>
-      <p>Además, en <strong>Authentication → Providers → Email</strong>, desactivá "Confirm email" para no depender de correos de verificación en un uso personal.</p>
-      <div class="key-row">
-        <input id="supaUrlInput" type="text" placeholder="Project URL (https://xxxx.supabase.co)">
-      </div>
-      <div class="key-row" style="margin-top:8px;">
-        <input id="supaKeyInput" type="text" placeholder="anon public key">
-        <button class="btn btn-primary btn-sm" id="saveSupaBtn">Guardar</button>
-      </div>
-    </div>
-
-    <div id="syncAuthBlock" style="display:none;">
-      <div id="authLoggedOut">
-        <p>Iniciá sesión (o creá una cuenta) para sincronizar. Usá el mismo email/contraseña en todos tus dispositivos.</p>
-        <div class="key-row">
-          <input id="authEmail" type="email" placeholder="tu@email.com">
-        </div>
-        <div class="key-row" style="margin-top:8px;">
-          <input id="authPassword" type="password" placeholder="Contraseña">
-        </div>
-        <div style="display:flex;gap:8px;margin-top:8px;">
-          <button class="btn btn-primary btn-sm" id="signInBtn">Iniciar sesión</button>
-          <button class="btn btn-ghost btn-sm" id="signUpBtn">Crear cuenta</button>
-        </div>
-      </div>
-      <div id="authLoggedIn" style="display:none;">
-        <p id="loggedInAs" style="color:var(--teal);"></p>
-        <div style="display:flex;gap:8px;">
-          <button class="btn btn-primary btn-sm" id="syncNowBtn">🔄 Sincronizar ahora</button>
-          <button class="btn btn-ghost btn-sm" id="signOutBtn">Cerrar sesión</button>
-        </div>
-        <div id="conflictChoice" style="display:none;margin-top:10px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px;">
-          <p style="margin:0 0 8px;font-size:12px;">Encontré datos guardados en la nube distintos a los de este dispositivo. ¿Cuáles usamos?</p>
-          <div style="display:flex;gap:8px;">
-            <button class="btn btn-primary btn-sm" id="useCloudBtn">Usar los de la nube</button>
-            <button class="btn btn-ghost btn-sm" id="useLocalBtn">Usar los de este dispositivo</button>
+          <p>Además, en <strong>Authentication → Providers → Email</strong>, desactivá "Confirm email" para no depender de correos de verificación en un uso personal.</p>
+          <div class="key-row">
+            <input id="supaUrlInput" type="text" placeholder="Project URL (https://xxxx.supabase.co)">
+          </div>
+          <div class="key-row" style="margin-top:8px;">
+            <input id="supaKeyInput" type="text" placeholder="anon public key">
+            <button class="btn btn-primary btn-sm" id="saveSupaBtn">Guardar</button>
           </div>
         </div>
+
+        <div id="syncAuthBlock" style="display:none;">
+          <div id="authLoggedOut">
+            <p>Iniciá sesión (o creá una cuenta) para sincronizar. Usá el mismo email/contraseña en todos tus dispositivos.</p>
+            <div class="key-row">
+              <input id="authEmail" type="email" placeholder="tu@email.com">
+            </div>
+            <div class="key-row" style="margin-top:8px;">
+              <input id="authPassword" type="password" placeholder="Contraseña">
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+              <button class="btn btn-primary btn-sm" id="signInBtn">Iniciar sesión</button>
+              <button class="btn btn-ghost btn-sm" id="signUpBtn">Crear cuenta</button>
+            </div>
+          </div>
+          <div id="authLoggedIn" style="display:none;">
+            <p id="loggedInAs" style="color:var(--teal);"></p>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-primary btn-sm" id="syncNowBtn">🔄 Sincronizar ahora</button>
+              <button class="btn btn-ghost btn-sm" id="signOutBtn">Cerrar sesión</button>
+            </div>
+            <div id="conflictChoice" style="display:none;margin-top:10px;background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:10px;">
+              <p style="margin:0 0 8px;font-size:12px;">Encontré datos guardados en la nube distintos a los de este dispositivo. ¿Cuáles usamos?</p>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-primary btn-sm" id="useCloudBtn">Usar los de la nube</button>
+                <button class="btn btn-ghost btn-sm" id="useLocalBtn">Usar los de este dispositivo</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="key-status" id="syncStatus"></div>
+      </div>
+
+      <div class="profile-section">
+        <div class="profile-section-title">API key de TMDB</div>
+        <p>
+          Necesitás una API key gratuita de TMDB. Sacala en
+          <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">themoviedb.org/settings/api</a>
+          (cuenta gratis, pedís una "API Key" tipo v3, es inmediato) y pegala aquí. Se guarda solo en tu navegador.
+        </p>
+        <div class="key-row">
+          <input id="apiKeyInput" type="text" placeholder="Pegá tu TMDB API key (v3)">
+          <button class="btn btn-primary btn-sm" id="saveKeyBtn">Guardar</button>
+        </div>
+        <div class="key-status" id="keyStatus"></div>
       </div>
     </div>
-    <div class="key-status" id="syncStatus"></div>
-  </div>
-
-  <div class="key-panel" id="keyPanel">
-    <p>
-      Necesitás una API key gratuita de TMDB. Sacala en
-      <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">themoviedb.org/settings/api</a>
-      (cuenta gratis, pedís una "API Key" tipo v3, es inmediato) y pegala aquí. Se guarda solo en tu navegador.
-    </p>
-    <div class="key-row">
-      <input id="apiKeyInput" type="text" placeholder="Pegá tu TMDB API key (v3)">
-      <button class="btn btn-primary btn-sm" id="saveKeyBtn">Guardar</button>
-    </div>
-    <div class="key-status" id="keyStatus"></div>
   </div>
 
   <!-- ===== TAB: INICIO ===== -->
@@ -706,9 +754,11 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
 <script>
 const DATA_KEY = 'series-tracker-data';
 const APIKEY_KEY = 'tmdb_api_key';
+// Pega acá tu TMDB API key (v3, la corta) para que no haya que configurarla en cada dispositivo.
+const BUILTIN_TMDB_KEY = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJlMDMxZDMwZDBjN2UwODA4YWE1OGE2ZDFmOGMxMTQ4YiIsIm5iZiI6MTc4MzgyNTYwNy4yNzUsInN1YiI6IjZhNTMwNGM3OTcyYjZlMGUzOWIxMjIzZiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.1cwZXwtGM-zsPLeGIZRaQlbD8YdQJ23ViTDRz5VHfs8';
 let seriesList = [];
 let activeSeasonBySeries = {};
-let apiKey = localStorage.getItem(APIKEY_KEY) || '';
+let apiKey = localStorage.getItem(APIKEY_KEY) || (isPlaceholder(BUILTIN_TMDB_KEY) ? '' : BUILTIN_TMDB_KEY);
 let currentFilter = 'todas';
 let discoverCache = null;
 
@@ -774,9 +824,6 @@ function refreshKeyStatus(){
     el.className = 'key-status missing';
   }
 }
-document.getElementById('gearBtn').addEventListener('click', () => {
-  document.getElementById('keyPanel').classList.toggle('open');
-});
 document.getElementById('saveKeyBtn').addEventListener('click', () => {
   const v = document.getElementById('apiKeyInput').value.trim().replace(/^["']|["']$/g, '');
   if(v){
@@ -1720,9 +1767,14 @@ function refreshSyncUI(){
   }
 }
 
-document.getElementById('cloudBtn').addEventListener('click', () => {
-  document.getElementById('syncPanel').classList.toggle('open');
+function openProfile(){ document.getElementById('profileOverlay').classList.add('open'); }
+function closeProfile(){ document.getElementById('profileOverlay').classList.remove('open'); }
+document.getElementById('profileBtn').addEventListener('click', openProfile);
+document.getElementById('closeProfileBtn').addEventListener('click', closeProfile);
+document.getElementById('profileOverlay').addEventListener('click', (e) => {
+  if(e.target.id === 'profileOverlay') closeProfile();
 });
+
 document.getElementById('saveSupaBtn').addEventListener('click', () => {
   const url = document.getElementById('supaUrlInput').value.trim().replace(/\/$/, '');
   const key = document.getElementById('supaKeyInput').value.trim();
@@ -1772,7 +1824,7 @@ document.getElementById('signOutBtn').addEventListener('click', async () => {
   currentSession = null;
   localStorage.removeItem(SKIP_LOGIN_KEY);
   refreshSyncUI();
-  document.getElementById('syncPanel').classList.remove('open');
+  closeProfile();
   document.getElementById('loginEmail').value = '';
   document.getElementById('loginPassword').value = '';
   setLoginMode('signin');
@@ -2000,7 +2052,7 @@ function goToSeries(seriesId){
 
 // ---------------- init ----------------
 refreshKeyStatus();
-if(!apiKey) document.getElementById('keyPanel').classList.add('open');
+if(!apiKey) openProfile();
 loadData();
 setLoginMode('signin');
 
