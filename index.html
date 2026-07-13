@@ -641,6 +641,21 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
         </div>
         <div class="key-status" id="keyStatus"></div>
       </div>
+
+      <div class="profile-section">
+        <div class="profile-section-title">Respaldo de tus series</div>
+        <p>Descargá una copia de todo lo que tenés cargado, por si algo sale mal alguna vez.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" id="exportJsonBtn">
+            <svg class="inline-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Descargar respaldo (JSON)
+          </button>
+          <button class="btn btn-ghost btn-sm" id="exportCsvBtn">
+            <svg class="inline-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Descargar respaldo (CSV)
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -672,7 +687,6 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
       </div>
       <button class="btn btn-primary" id="toggleAddBtn">+ Agregar serie</button>
       <button class="btn btn-ghost" id="toggleImportBtn"><svg class="inline-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Importar historial</button>
-      <button class="btn btn-ghost" id="dedupeBtn"><svg class="inline-icon" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Fusionar duplicados</button>
     </div>
 
     <div class="add-form" id="importPanel">
@@ -683,9 +697,16 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
         </p>
         <input type="file" id="importFileInput" accept=".csv,text/csv" style="margin-bottom:10px;">
         <div id="importLog" style="display:none;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);max-height:200px;overflow-y:auto;margin-bottom:10px;"></div>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-primary btn-sm" id="startImportBtn">Iniciar importación</button>
           <button class="btn btn-ghost btn-sm" id="cancelImportBtn">Cerrar</button>
+        </div>
+        <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px;">
+          <p class="sub" style="margin-bottom:8px;">Si algo salió mal con una importación anterior (series duplicadas, o querés volver a empezar):</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-ghost btn-sm" id="dedupeBtn"><svg class="inline-icon" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Fusionar duplicados</button>
+            <button class="btn btn-ghost btn-sm" id="resetImportBtn"><svg class="inline-icon" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>Empezar de cero con el importado</button>
+          </div>
         </div>
       </div>
     </div>
@@ -954,6 +975,12 @@ function addSeriesFromTMDB(details){
   saveData();
   render();
 }
+function pushImportedManualSeries(title){
+  const s = { id: uid(), title: title.trim(), poster: null, tmdbId: null, seasons: [], genres: [], runtime: null, nextEpisode: null, tmdbStatus: '' };
+  seriesList.push(s);
+  return s;
+}
+
 function addSeriesManual(title){
   const s = { id: uid(), title: title.trim(), poster: null, tmdbId: null, seasons: [], genres: [], runtime: null, nextEpisode: null, tmdbStatus: '', lastActivity: Date.now() };
   seriesList.push(s);
@@ -1432,6 +1459,69 @@ function dedupeSeries(){
   return { mergedGroups, removedCount };
 }
 
+function resetToPlatformOnly(){
+  const before = seriesList.length;
+  const kept = seriesList.filter(s => !!s.lastActivity);
+  const removed = before - kept.length;
+  seriesList = kept;
+  if(openSeriesId && !seriesList.find(s => s.id === openSeriesId)) openSeriesId = null;
+  saveData();
+  render();
+  return removed;
+}
+document.getElementById('resetImportBtn').addEventListener('click', () => {
+  const withActivity = seriesList.filter(s => !!s.lastActivity).length;
+  const withoutActivity = seriesList.length - withActivity;
+  if(!confirm(
+    `Esto va a borrar ${withoutActivity} serie(s) que vinieron solo del historial importado y nunca tocaste en la app.\n\n` +
+    `Se van a conservar ${withActivity} serie(s) donde marcaste o desmarcaste algo directamente acá.\n\n` +
+    `Después podés volver a correr "Importar historial" para reconstruir todo de nuevo, sin duplicados.\n\n` +
+    `¿Continuar?`
+  )) return;
+  const removed = resetToPlatformOnly();
+  alert(`Listo: borré ${removed} serie(s) del historial importado. Tu progreso hecho en la app quedó intacto.`);
+});
+
+// ---------------- Exportar respaldo ----------------
+function downloadFile(filename, content, mime){
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+function todayStamp(){
+  return new Date().toISOString().slice(0, 10);
+}
+document.getElementById('exportJsonBtn').addEventListener('click', () => {
+  const payload = { exportedAt: new Date().toISOString(), series: seriesList };
+  downloadFile(`series-tracker-respaldo-${todayStamp()}.json`, JSON.stringify(payload, null, 2), 'application/json');
+});
+document.getElementById('exportCsvBtn').addEventListener('click', () => {
+  const rows = [['title', 'tmdb_id', 'season', 'episode', 'watched', 'status', 'abandoned']];
+  seriesList.forEach(s => {
+    const status = computeStatus(s);
+    if(s.seasons.length === 0){
+      rows.push([s.title, s.tmdbId || '', '', '', '', status, s.abandoned ? 'true' : 'false']);
+      return;
+    }
+    s.seasons.slice().sort((a,b) => a.number - b.number).forEach(se => {
+      se.watched.forEach((w, i) => {
+        rows.push([s.title, s.tmdbId || '', se.number, i + 1, w ? 'true' : 'false', status, s.abandoned ? 'true' : 'false']);
+      });
+    });
+  });
+  const csv = rows.map(r => r.map(v => {
+    const str = String(v);
+    return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+  }).join(',')).join('\n');
+  downloadFile(`series-tracker-respaldo-${todayStamp()}.csv`, csv, 'text/csv');
+});
+
 document.getElementById('dedupeBtn').addEventListener('click', () => {
   if(!confirm('Voy a buscar series repetidas y fusionar su progreso en una sola copia (sin perder episodios marcados). ¿Continuar?')) return;
   const { mergedGroups, removedCount } = dedupeSeries();
@@ -1611,8 +1701,7 @@ async function runImport(){
             applyImportDate(existing, g);
             totalEpisodesMarked += matched;
           } else {
-            addSeriesManual(g.title);
-            const created2 = seriesList[seriesList.length - 1];
+            const created2 = pushImportedManualSeries(g.title);
             const { matched } = markImportedEpisodes(created2, g.seasons);
             applyImportDate(created2, g);
             totalEpisodesMarked += matched;
@@ -1626,8 +1715,7 @@ async function runImport(){
           applyImportDate(existing, g);
           totalEpisodesMarked += matched;
         } else {
-          addSeriesManual(g.title);
-          const created2 = seriesList[seriesList.length - 1];
+          const created2 = pushImportedManualSeries(g.title);
           const { matched } = markImportedEpisodes(created2, g.seasons);
           applyImportDate(created2, g);
           totalEpisodesMarked += matched;
