@@ -2689,28 +2689,29 @@ async function syncSharedSeries(){
   if(!sharedRow || sharedRow.status !== 'accepted') return;
 
   const sharedCloudList = Array.isArray(sharedRow.data) ? sharedRow.data : [];
-  const mySharedList = seriesList.filter(s => s.shared);
 
-  // combina lo que ya tenías compartido localmente con lo que hay en la nube compartida
-  const mergedShared = mergeSeriesLists(mySharedList, sharedCloudList).map(s => ({ ...s, shared: true }));
-
-  // aplica el resultado combinado sobre tu lista personal (agrega lo nuevo, actualiza lo existente)
-  mergedShared.forEach(shared => {
+  // aplica lo que venga de la nube sobre tu lista real: si ya tenías esa serie (compartida o no),
+  // fusiona el progreso sin perder nada de lo tuyo; si no la tenías, te aparece nueva.
+  sharedCloudList.forEach(shared => {
     const existingIdx = seriesList.findIndex(s => seriesKey(s) === seriesKey(shared));
     if(existingIdx >= 0){
       mergeSeriesInto(seriesList[existingIdx], shared);
       seriesList[existingIdx].shared = true;
     } else {
-      seriesList.push({ ...shared, id: uid() });
+      seriesList.push({ ...shared, id: uid(), shared: true });
     }
   });
+
+  // el estado que se comparte de vuelta es TODO lo que en tu lista quedó marcado como compartido,
+  // ya con la fusión recién aplicada — así tu pareja recibe tu progreso real en la misma pasada.
+  const mySharedNow = seriesList.filter(s => s.shared);
+
   saveData(false);
   render();
 
-  // sube de vuelta el combinado, así tu pareja también lo recibe
   const { error } = await supabaseClient
     .from('shared_series')
-    .update({ data: mergedShared, updated_at: new Date().toISOString() })
+    .update({ data: mySharedNow, updated_at: new Date().toISOString() })
     .eq('id', sharedRow.id);
   if(error) console.warn('Error subiendo series compartidas', error);
 }
