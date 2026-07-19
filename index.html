@@ -951,7 +951,10 @@ function loadData(){
 }
 function saveData(sync = true){
   localStorage.setItem(DATA_KEY, JSON.stringify(seriesList));
-  if(sync) scheduleCloudPush();
+  if(sync){
+    scheduleCloudPush();
+    if(seriesList.some(s => s.shared)) scheduleSharedPush();
+  }
 }
 function uid(){ return Math.random().toString(36).slice(2,10); }
 function escapeHtml(str){
@@ -2683,12 +2686,20 @@ document.getElementById('unlinkPartnerBtn').addEventListener('click', async () =
   document.getElementById('partnerStatus').className = 'key-status';
 });
 
+let sharedPushTimer = null;
+function scheduleSharedPush(){
+  if(!currentSession || !sharedRow || sharedRow.status !== 'accepted') return;
+  clearTimeout(sharedPushTimer);
+  sharedPushTimer = setTimeout(syncSharedSeries, 1200);
+}
+
 async function syncSharedSeries(){
   sharedRow = await fetchSharedRow();
   refreshPartnerUI();
   if(!sharedRow || sharedRow.status !== 'accepted') return;
 
   const sharedCloudList = Array.isArray(sharedRow.data) ? sharedRow.data : [];
+  const before = JSON.stringify(seriesList);
 
   // aplica lo que venga de la nube sobre tu lista real: si ya tenías esa serie (compartida o no),
   // fusiona el progreso sin perder nada de lo tuyo; si no la tenías, te aparece nueva.
@@ -2705,9 +2716,15 @@ async function syncSharedSeries(){
   // el estado que se comparte de vuelta es TODO lo que en tu lista quedó marcado como compartido,
   // ya con la fusión recién aplicada — así tu pareja recibe tu progreso real en la misma pasada.
   const mySharedNow = seriesList.filter(s => s.shared);
+  const changedLocally = JSON.stringify(seriesList) !== before;
 
-  saveData(false);
-  render();
+  if(changedLocally){
+    saveData(false);
+    render(); // solo redibuja si de verdad cambió algo (tu pareja marcó/agregó algo nuevo)
+  }
+
+  const sameAsCloud = JSON.stringify(mySharedNow) === JSON.stringify(sharedCloudList);
+  if(sameAsCloud) return; // nada para subir, no molestamos a la base de datos sin necesidad
 
   const { error } = await supabaseClient
     .from('shared_series')
@@ -2957,6 +2974,11 @@ setLoginMode('signin');
   }
   refreshSyncUI();
   renderDashboard();
+
+  // mientras la app está abierta, revisa cada 45s si tu pareja actualizó algo compartido
+  setInterval(() => {
+    if(currentSession && sharedRow && sharedRow.status === 'accepted') syncSharedSeries();
+  }, 45000);
 })();
 </script>
 </body>
