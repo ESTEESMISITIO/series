@@ -2304,7 +2304,7 @@ document.getElementById('refreshDiscoverBtn').addEventListener('click', loadDisc
 
 // ---------------- Estadísticas ----------------
 function renderStats2(){
-  let watchedEpisodes = 0, totalMinutes = 0, completed = 0, watching = 0, pending = 0;
+  let watchedEpisodes = 0, totalMinutes = 0, completed = 0, watching = 0, pending = 0, abandoned = 0;
   const genreCount = {};
   let longest = null; // {title, episodes}
   seriesList.forEach(s => {
@@ -2318,6 +2318,7 @@ function renderStats2(){
     }
     else if(st === 'viendo') watching++;
     else if(st === 'pendiente') pending++;
+    else if(st === 'abandonada') abandoned++;
     (s.genres || []).forEach(g => { genreCount[g] = (genreCount[g] || 0) + 1; });
   });
   const totalHours = Math.round(totalMinutes / 60);
@@ -2374,13 +2375,13 @@ function renderStats2(){
         </div>`).join('')
     : `<p class="sub">Abre algunas fichas de series (sección "Dónde verla") para que aparezcan acá.</p>`;
 
-  const statusData = [['Viendo', watching, 'var(--teal)'], ['Pendientes', pending, 'var(--gold)'], ['Completadas', completed, 'var(--green)']];
+  const statusData = [['Viendo', watching, 'var(--teal)'], ['Pendientes', pending, 'var(--gold)'], ['Completadas', completed, 'var(--green)'], ['Abandonadas', abandoned, 'var(--danger)']];
   const maxStatus = Math.max(1, ...statusData.map(x => x[1]));
   document.getElementById('statusBars').innerHTML = statusData.map(([label, count, color]) => `
     <div class="bar-row">
       <div class="bar-label">${label}</div>
       <div class="bar-track"><div class="bar-fill" style="width:${(count/maxStatus*100)}%;background:${color}"></div></div>
-      <div class="bar-val">${count}</div>
+      <div class="bar-val">${fmt(count)}</div>
     </div>`).join('');
 
   // récords
