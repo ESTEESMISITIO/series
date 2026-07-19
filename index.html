@@ -696,6 +696,23 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
       </div>
 
       <div class="profile-section">
+        <div class="profile-section-title">Compartir con tu pareja</div>
+        <p>Vincula tu cuenta con la de tu pareja para compartir las series que marques como "compartida" — lo que uno marque se sincroniza para los dos.</p>
+        <div id="partnerLinked" style="display:none;">
+          <p style="color:var(--teal);font-size:13px;margin-bottom:8px;">Vinculado ✓ — las series compartidas se sincronizan entre las dos cuentas.</p>
+          <button class="btn btn-ghost btn-sm" id="unlinkPartnerBtn">Desvincular</button>
+        </div>
+        <div id="partnerNotLinked">
+          <div class="key-row">
+            <input id="partnerEmailInput" type="email" placeholder="correo de tu pareja">
+            <button class="btn btn-primary btn-sm" id="linkPartnerBtn">Vincular</button>
+          </div>
+          <p style="font-size:11.5px;color:var(--muted);margin-top:6px;">Ella no tiene que hacer nada de su lado — en cuanto la vincules, su app va a reconocer la conexión sola.</p>
+        </div>
+        <div class="key-status" id="partnerStatus"></div>
+      </div>
+
+      <div class="profile-section">
         <div class="profile-section-title">API key de TMDB</div>
         <p>
           Necesitás una API key gratuita de TMDB. Sacala en
@@ -1438,9 +1455,13 @@ function renderDetail(seriesId){
           <p class="detail-title">${escapeHtml(s.title)}</p>
           ${genresHtml}
           <span class="status-badge ${status}"><span class="dot"></span>${statusText}</span>
+          ${s.shared ? `<span class="status-badge viendo" style="margin-left:6px;"><span class="dot"></span>👥 Compartida</span>` : ''}
           ${total ? `<div class="progress-track" style="margin:10px 0 0;"><div class="progress-fill" style="width:${pct}%;background:${status === 'completada' ? 'var(--progress-green)' : status === 'abandonada' ? 'var(--muted)' : 'linear-gradient(90deg,#8a4f9e,var(--gold))'}"></div></div>` : ''}
           <div class="detail-actions">
             ${syncBtn}
+            <button class="btn btn-ghost" onclick="toggleShared('${s.id}')">${s.shared
+              ? '<svg class="inline-icon" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Dejar de compartir'
+              : '<svg class="inline-icon" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Compartir con tu pareja'}</button>
             <button class="btn btn-ghost" onclick="toggleAbandoned('${s.id}')">${s.abandoned
               ? '<svg class="inline-icon" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>Quitar de abandonadas'
               : '<svg class="inline-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>Marcar como abandonada'}</button>
@@ -2464,23 +2485,134 @@ async function handlePostLoginSync(){
   if(!cloudHasData){
     if(seriesList.length > 0) await pushToCloud();
     else setSyncStatus('Sincronización activa ✓', true);
+  } else {
+    const merged = mergeSeriesLists(seriesList, cloudData);
+    const changed = JSON.stringify(merged) !== JSON.stringify(seriesList);
+    seriesList = merged;
+    saveData(false);
+    render();
+
+    if(changed){
+      setSyncStatus('Combiné los datos de este dispositivo con la nube ✓', true);
+      await pushToCloud(); // sube el resultado combinado, así los demás dispositivos también lo reciben
+    } else {
+      setSyncStatus('Ya estaba todo sincronizado ✓', true);
+    }
+  }
+  await syncSharedSeries();
+}
+document.getElementById('syncNowBtn').addEventListener('click', pushToCloud);
+
+// ---------------- Compartir con la pareja ----------------
+let sharedRow = null; // { id, member_a, member_b, data }
+
+async function fetchSharedRow(){
+  if(!supabaseClient || !currentSession) return null;
+  const uid = currentSession.user.id;
+  const { data, error } = await supabaseClient
+    .from('shared_series')
+    .select('*')
+    .or(`member_a.eq.${uid},member_b.eq.${uid}`)
+    .maybeSingle();
+  if(error){ console.warn('Error buscando vínculo compartido', error); return null; }
+  return data;
+}
+
+function refreshPartnerUI(){
+  const linked = !!sharedRow;
+  document.getElementById('partnerLinked').style.display = linked ? 'block' : 'none';
+  document.getElementById('partnerNotLinked').style.display = linked ? 'none' : 'block';
+}
+
+document.getElementById('linkPartnerBtn').addEventListener('click', async () => {
+  const email = document.getElementById('partnerEmailInput').value.trim();
+  const statusEl = document.getElementById('partnerStatus');
+  if(!email){ statusEl.textContent = 'Escribe el correo de tu pareja.'; statusEl.className = 'key-status missing'; return; }
+  if(!supabaseClient || !currentSession){ statusEl.textContent = 'Necesitas iniciar sesión primero.'; statusEl.className = 'key-status missing'; return; }
+
+  statusEl.textContent = 'Buscando esa cuenta...'; statusEl.className = 'key-status';
+  const { data: partnerId, error } = await supabaseClient.rpc('find_user_id_by_email', { target_email: email });
+  if(error || !partnerId){
+    statusEl.textContent = 'No encontré ninguna cuenta con ese correo. Tiene que haber creado su cuenta en esta misma app antes.';
+    statusEl.className = 'key-status missing';
+    return;
+  }
+  if(partnerId === currentSession.user.id){
+    statusEl.textContent = 'Ese es tu propio correo — escribe el de tu pareja.';
+    statusEl.className = 'key-status missing';
     return;
   }
 
-  const merged = mergeSeriesLists(seriesList, cloudData);
-  const changed = JSON.stringify(merged) !== JSON.stringify(seriesList);
-  seriesList = merged;
+  const { data: created, error: insertError } = await supabaseClient
+    .from('shared_series')
+    .insert({ member_a: currentSession.user.id, member_b: partnerId, data: [] })
+    .select()
+    .single();
+  if(insertError){
+    statusEl.textContent = 'No se pudo vincular. Puede que ya estés vinculado con alguien más.';
+    statusEl.className = 'key-status missing';
+    return;
+  }
+  sharedRow = created;
+  refreshPartnerUI();
+  statusEl.textContent = 'Vinculado ✓';
+  statusEl.className = 'key-status ok';
+  document.getElementById('partnerEmailInput').value = '';
+});
+
+document.getElementById('unlinkPartnerBtn').addEventListener('click', async () => {
+  if(!sharedRow) return;
+  if(!confirm('Esto desvincula las cuentas. Las series que estaban compartidas quedan como personales en cada cuenta, tal como están ahora. ¿Continuar?')) return;
+  await supabaseClient.from('shared_series').delete().eq('id', sharedRow.id);
+  sharedRow = null;
+  refreshPartnerUI();
+  document.getElementById('partnerStatus').textContent = 'Desvinculado.';
+  document.getElementById('partnerStatus').className = 'key-status';
+});
+
+async function syncSharedSeries(){
+  sharedRow = await fetchSharedRow();
+  refreshPartnerUI();
+  if(!sharedRow) return;
+
+  const sharedCloudList = Array.isArray(sharedRow.data) ? sharedRow.data : [];
+  const mySharedList = seriesList.filter(s => s.shared);
+
+  // combina lo que ya tenías compartido localmente con lo que hay en la nube compartida
+  const mergedShared = mergeSeriesLists(mySharedList, sharedCloudList).map(s => ({ ...s, shared: true }));
+
+  // aplica el resultado combinado sobre tu lista personal (agrega lo nuevo, actualiza lo existente)
+  mergedShared.forEach(shared => {
+    const existingIdx = seriesList.findIndex(s => seriesKey(s) === seriesKey(shared));
+    if(existingIdx >= 0){
+      mergeSeriesInto(seriesList[existingIdx], shared);
+      seriesList[existingIdx].shared = true;
+    } else {
+      seriesList.push({ ...shared, id: uid() });
+    }
+  });
   saveData(false);
   render();
 
-  if(changed){
-    setSyncStatus('Combiné los datos de este dispositivo con la nube ✓', true);
-    await pushToCloud(); // sube el resultado combinado, así los demás dispositivos también lo reciben
-  } else {
-    setSyncStatus('Ya estaba todo sincronizado ✓', true);
-  }
+  // sube de vuelta el combinado, así tu pareja también lo recibe
+  const { error } = await supabaseClient
+    .from('shared_series')
+    .update({ data: mergedShared, updated_at: new Date().toISOString() })
+    .eq('id', sharedRow.id);
+  if(error) console.warn('Error subiendo series compartidas', error);
 }
-document.getElementById('syncNowBtn').addEventListener('click', pushToCloud);
+
+function toggleShared(seriesId){
+  const s = seriesList.find(x => x.id === seriesId);
+  if(!sharedRow){
+    alert('Primero vincula tu cuenta con la de tu pareja desde el Perfil.');
+    return;
+  }
+  s.shared = !s.shared;
+  saveData();
+  render();
+  syncSharedSeries();
+}
 document.getElementById('resetSupaConfigBtn').addEventListener('click', () => {
   if(!confirm('Esto va a olvidar la configuración de Supabase guardada manualmente en este dispositivo y usar la que viene incluida en la app. Vas a tener que iniciar sesión de nuevo. ¿Continuar?')) return;
   localStorage.removeItem(SUPA_URL_KEY);
