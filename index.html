@@ -696,19 +696,47 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
       </div>
 
       <div class="profile-section">
-        <div class="profile-section-title">Compartir con tu pareja</div>
-        <p>Vincula tu cuenta con la de tu pareja para compartir las series que marques como "compartida" — lo que uno marque se sincroniza para los dos.</p>
-        <div id="partnerLinked" style="display:none;">
-          <p style="color:var(--teal);font-size:13px;margin-bottom:8px;">Vinculado ✓ — las series compartidas se sincronizan entre las dos cuentas.</p>
-          <button class="btn btn-ghost btn-sm" id="unlinkPartnerBtn">Desvincular</button>
+        <div class="profile-section-title">Tu nombre</div>
+        <p>Así te va a ver tu pareja cuando compartan series (por ejemplo, en el botón "Compartir con...").</p>
+        <div class="key-row">
+          <input id="myNameInput" type="text" placeholder="Tu nombre" maxlength="30">
+          <button class="btn btn-primary btn-sm" id="saveMyNameBtn">Guardar</button>
         </div>
-        <div id="partnerNotLinked">
+        <div class="key-status" id="myNameStatus"></div>
+      </div>
+
+      <div class="profile-section">
+        <div class="profile-section-title">Compartir con tu pareja</div>
+        <p>Envíale una solicitud de vínculo. Cuando la acepte, van a poder compartir las series que marquen como "compartida" — lo que uno marque se sincroniza para los dos.</p>
+
+        <div id="partnerNone">
           <div class="key-row">
             <input id="partnerEmailInput" type="email" placeholder="correo de tu pareja">
-            <button class="btn btn-primary btn-sm" id="linkPartnerBtn">Vincular</button>
           </div>
-          <p style="font-size:11.5px;color:var(--muted);margin-top:6px;">Ella no tiene que hacer nada de su lado — en cuanto la vincules, su app va a reconocer la conexión sola.</p>
+          <div class="key-row" style="margin-top:8px;">
+            <input id="partnerNameInput" type="text" placeholder="¿cómo se llama?" maxlength="30">
+            <button class="btn btn-primary btn-sm" id="linkPartnerBtn">Enviar solicitud</button>
+          </div>
         </div>
+
+        <div id="partnerPendingSent" style="display:none;">
+          <p style="font-size:13px;color:var(--gold);margin-bottom:8px;">Le enviaste una solicitud a <strong id="pendingSentName"></strong>. Falta que la acepte desde su Perfil.</p>
+          <button class="btn btn-ghost btn-sm" id="cancelPendingBtn">Cancelar solicitud</button>
+        </div>
+
+        <div id="partnerPendingReceived" style="display:none;">
+          <p style="font-size:13px;margin-bottom:8px;"><strong id="pendingReceivedName"></strong> quiere vincular su cuenta con la tuya para compartir series. ¿Aceptas?</p>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-primary btn-sm" id="acceptPartnerBtn">Aceptar</button>
+            <button class="btn btn-ghost btn-sm" id="rejectPartnerBtn">Rechazar</button>
+          </div>
+        </div>
+
+        <div id="partnerLinked" style="display:none;">
+          <p style="color:var(--teal);font-size:13px;margin-bottom:8px;">Vinculado con <strong id="linkedPartnerName"></strong> ✓</p>
+          <button class="btn btn-ghost btn-sm" id="unlinkPartnerBtn">Desvincular</button>
+        </div>
+
         <div class="key-status" id="partnerStatus"></div>
       </div>
 
@@ -1461,7 +1489,7 @@ function renderDetail(seriesId){
             ${syncBtn}
             <button class="btn btn-ghost" onclick="toggleShared('${s.id}')">${s.shared
               ? '<svg class="inline-icon" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Dejar de compartir'
-              : '<svg class="inline-icon" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Compartir con tu pareja'}</button>
+              : `<svg class="inline-icon" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Compartir${(sharedRow && sharedRow.status === 'accepted') ? ' con ' + escapeHtml(partnerNameFor(sharedRow)) : ''}`}</button>
             <button class="btn btn-ghost" onclick="toggleAbandoned('${s.id}')">${s.abandoned
               ? '<svg class="inline-icon" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>Quitar de abandonadas'
               : '<svg class="inline-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>Marcar como abandonada'}</button>
@@ -2428,11 +2456,16 @@ document.getElementById('signInBtn').addEventListener('click', async () => {
 document.getElementById('signOutBtn').addEventListener('click', async () => {
   await supabaseClient.auth.signOut();
   currentSession = null;
+  sharedRow = null;
+  openSeriesId = null;
+  seriesList = [];
+  localStorage.removeItem(DATA_KEY);
   refreshSyncUI();
   closeProfile();
   document.getElementById('loginEmail').value = '';
   document.getElementById('loginPassword').value = '';
   setLoginMode('signin');
+  render();
   lockApp();
 });
 
@@ -2503,8 +2536,21 @@ async function handlePostLoginSync(){
 }
 document.getElementById('syncNowBtn').addEventListener('click', pushToCloud);
 
+// ---------------- Tu nombre ----------------
+const MY_NAME_KEY = 'my_display_name';
+let myName = localStorage.getItem(MY_NAME_KEY) || '';
+document.getElementById('myNameInput').value = myName;
+document.getElementById('saveMyNameBtn').addEventListener('click', () => {
+  const v = document.getElementById('myNameInput').value.trim();
+  const statusEl = document.getElementById('myNameStatus');
+  if(!v){ statusEl.textContent = 'Escribe tu nombre.'; statusEl.className = 'key-status missing'; return; }
+  myName = v;
+  localStorage.setItem(MY_NAME_KEY, myName);
+  statusEl.textContent = 'Guardado ✓'; statusEl.className = 'key-status ok';
+});
+
 // ---------------- Compartir con la pareja ----------------
-let sharedRow = null; // { id, member_a, member_b, data }
+let sharedRow = null; // { id, member_a, member_b, status, inviter_name, invitee_name, data }
 
 async function fetchSharedRow(){
   if(!supabaseClient || !currentSession) return null;
@@ -2518,16 +2564,43 @@ async function fetchSharedRow(){
   return data;
 }
 
+// nombre de la otra persona, visto desde mi cuenta
+function partnerNameFor(row){
+  if(!row || !currentSession) return '';
+  const iAmA = row.member_a === currentSession.user.id;
+  return iAmA ? row.invitee_name : row.inviter_name;
+}
+function iAmInviter(row){
+  return row && currentSession && row.member_a === currentSession.user.id;
+}
+
 function refreshPartnerUI(){
-  const linked = !!sharedRow;
-  document.getElementById('partnerLinked').style.display = linked ? 'block' : 'none';
-  document.getElementById('partnerNotLinked').style.display = linked ? 'none' : 'block';
+  const none = !sharedRow;
+  const pending = sharedRow && sharedRow.status === 'pending';
+  const accepted = sharedRow && sharedRow.status === 'accepted';
+
+  document.getElementById('partnerNone').style.display = none ? 'block' : 'none';
+  document.getElementById('partnerPendingSent').style.display = (pending && iAmInviter(sharedRow)) ? 'block' : 'none';
+  document.getElementById('partnerPendingReceived').style.display = (pending && !iAmInviter(sharedRow)) ? 'block' : 'none';
+  document.getElementById('partnerLinked').style.display = accepted ? 'block' : 'none';
+
+  if(pending && iAmInviter(sharedRow)){
+    document.getElementById('pendingSentName').textContent = partnerNameFor(sharedRow) || 'tu pareja';
+  }
+  if(pending && !iAmInviter(sharedRow)){
+    document.getElementById('pendingReceivedName').textContent = sharedRow.inviter_name || 'Alguien';
+  }
+  if(accepted){
+    document.getElementById('linkedPartnerName').textContent = partnerNameFor(sharedRow) || 'tu pareja';
+  }
 }
 
 document.getElementById('linkPartnerBtn').addEventListener('click', async () => {
   const email = document.getElementById('partnerEmailInput').value.trim();
+  const partnerName = document.getElementById('partnerNameInput').value.trim();
   const statusEl = document.getElementById('partnerStatus');
-  if(!email){ statusEl.textContent = 'Escribe el correo de tu pareja.'; statusEl.className = 'key-status missing'; return; }
+  if(!myName){ statusEl.textContent = 'Primero guarda tu nombre, arriba.'; statusEl.className = 'key-status missing'; return; }
+  if(!email || !partnerName){ statusEl.textContent = 'Completa el correo y el nombre de tu pareja.'; statusEl.className = 'key-status missing'; return; }
   if(!supabaseClient || !currentSession){ statusEl.textContent = 'Necesitas iniciar sesión primero.'; statusEl.className = 'key-status missing'; return; }
 
   statusEl.textContent = 'Buscando esa cuenta...'; statusEl.className = 'key-status';
@@ -2545,19 +2618,59 @@ document.getElementById('linkPartnerBtn').addEventListener('click', async () => 
 
   const { data: created, error: insertError } = await supabaseClient
     .from('shared_series')
-    .insert({ member_a: currentSession.user.id, member_b: partnerId, data: [] })
+    .insert({
+      member_a: currentSession.user.id,
+      member_b: partnerId,
+      status: 'pending',
+      inviter_name: myName,
+      invitee_name: partnerName,
+      data: []
+    })
     .select()
     .single();
   if(insertError){
-    statusEl.textContent = 'No se pudo vincular. Puede que ya estés vinculado con alguien más.';
+    statusEl.textContent = 'No se pudo enviar la solicitud. Puede que ya estés vinculado (o con una solicitud pendiente) con alguien.';
     statusEl.className = 'key-status missing';
     return;
   }
   sharedRow = created;
   refreshPartnerUI();
-  statusEl.textContent = 'Vinculado ✓';
-  statusEl.className = 'key-status ok';
+  statusEl.textContent = '';
   document.getElementById('partnerEmailInput').value = '';
+  document.getElementById('partnerNameInput').value = '';
+});
+
+document.getElementById('cancelPendingBtn').addEventListener('click', async () => {
+  if(!sharedRow) return;
+  await supabaseClient.from('shared_series').delete().eq('id', sharedRow.id);
+  sharedRow = null;
+  refreshPartnerUI();
+});
+
+document.getElementById('acceptPartnerBtn').addEventListener('click', async () => {
+  if(!sharedRow) return;
+  if(!myName){
+    document.getElementById('partnerStatus').textContent = 'Primero guarda tu nombre, arriba, para que tu pareja lo vea.';
+    document.getElementById('partnerStatus').className = 'key-status missing';
+    return;
+  }
+  const { data, error } = await supabaseClient
+    .from('shared_series')
+    .update({ status: 'accepted', invitee_name: myName }) // invitee_name pasa a ser cómo se llama a sí mismo quien acepta
+    .eq('id', sharedRow.id)
+    .select()
+    .single();
+  if(error){ document.getElementById('partnerStatus').textContent = 'No se pudo aceptar. Probá de nuevo.'; return; }
+  sharedRow = data;
+  refreshPartnerUI();
+  await syncSharedSeries();
+});
+
+document.getElementById('rejectPartnerBtn').addEventListener('click', async () => {
+  if(!sharedRow) return;
+  await supabaseClient.from('shared_series').delete().eq('id', sharedRow.id);
+  sharedRow = null;
+  refreshPartnerUI();
 });
 
 document.getElementById('unlinkPartnerBtn').addEventListener('click', async () => {
@@ -2573,7 +2686,7 @@ document.getElementById('unlinkPartnerBtn').addEventListener('click', async () =
 async function syncSharedSeries(){
   sharedRow = await fetchSharedRow();
   refreshPartnerUI();
-  if(!sharedRow) return;
+  if(!sharedRow || sharedRow.status !== 'accepted') return;
 
   const sharedCloudList = Array.isArray(sharedRow.data) ? sharedRow.data : [];
   const mySharedList = seriesList.filter(s => s.shared);
@@ -2604,8 +2717,8 @@ async function syncSharedSeries(){
 
 function toggleShared(seriesId){
   const s = seriesList.find(x => x.id === seriesId);
-  if(!sharedRow){
-    alert('Primero vincula tu cuenta con la de tu pareja desde el Perfil.');
+  if(!sharedRow || sharedRow.status !== 'accepted'){
+    alert('Primero vincula tu cuenta con la de tu pareja desde el Perfil (sección "Compartir con tu pareja").');
     return;
   }
   s.shared = !s.shared;
@@ -2669,6 +2782,11 @@ document.getElementById('loginSubmitBtn').addEventListener('click', async () => 
     errEl.textContent = 'Cuenta creada. Confirma tu correo y luego inicia sesión.';
     setLoginMode('signin');
     return;
+  }
+  if(loginMode === 'signup'){
+    // una cuenta recién creada nunca hereda datos que hayan quedado de otra sesión en este dispositivo
+    seriesList = [];
+    localStorage.removeItem(DATA_KEY);
   }
   currentSession = data.session;
   unlockApp();
