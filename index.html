@@ -963,6 +963,8 @@ function extractMeta(details){
     backdrop: details.backdrop_path ? 'https://image.tmdb.org/t/p/w780' + details.backdrop_path : null,
     genres: (details.genres || []).map(g => g.name),
     runtime: (details.episode_run_time && details.episode_run_time.length) ? details.episode_run_time[0] : null,
+    overview: details.overview || '',
+    firstAirDate: details.first_air_date || '',
     nextEpisode: details.next_episode_to_air ? {
       air_date: details.next_episode_to_air.air_date,
       season_number: details.next_episode_to_air.season_number,
@@ -1264,8 +1266,10 @@ function renderDetail(seriesId){
   const backdropHtml = s.backdrop
     ? `<div class="detail-backdrop" style="background-image:url('${s.backdrop}')"></div>` : '';
   const posterHtml = s.poster ? `<img class="detail-poster" src="${s.poster}" alt="">` : `<div class="detail-poster"></div>`;
-  const genresHtml = (s.genres && s.genres.length)
-    ? `<div class="detail-genres">${escapeHtml(s.genres.slice(0,3).join(' · '))}${s.runtime ? ' · ' + s.runtime + ' min' : ''}</div>` : '';
+  const year = s.firstAirDate ? s.firstAirDate.slice(0,4) : '';
+  const genresLine = [year, ...(s.genres || []).slice(0,3)].filter(Boolean).join(' · ');
+  const genresHtml = genresLine
+    ? `<div class="detail-genres">${escapeHtml(genresLine)}${s.runtime ? ' · ' + s.runtime + ' min' : ''}</div>` : '';
   const syncBtn = s.tmdbId ? `<button class="btn btn-ghost" onclick="syncSeries('${s.id}')"><svg class="inline-icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>Actualizar</button>` : '';
 
   view.innerHTML = `
@@ -1290,6 +1294,9 @@ function renderDetail(seriesId){
       </div>
     </div>
     <div class="providers-block" id="providersBlock"></div>
+    <div class="preview-block" id="synopsisBlock" style="padding:0 1px 4px;margin-bottom:14px;">
+      ${s.overview ? `<div class="providers-label">Sinopsis</div><p class="preview-overview">${escapeHtml(s.overview)}</p>` : ''}
+    </div>
     <div class="seasons">${seasonsTabsHtml}</div>
     <div class="season-actions" id="seasonActions"></div>
     <div id="episodeListContainer"><div class="ep-loading">Cargando episodios...</div></div>
@@ -1297,6 +1304,16 @@ function renderDetail(seriesId){
 
   renderEpisodeList(s, activeSeason);
   renderProviders(s);
+  if(s.tmdbId && (!s.overview || !s.firstAirDate)) backfillSeriesMeta(s);
+}
+
+async function backfillSeriesMeta(s){
+  const details = await tmdbGetShowDetails(s.tmdbId);
+  if(!details) return;
+  if(!s.overview) s.overview = details.overview || '';
+  if(!s.firstAirDate) s.firstAirDate = details.first_air_date || '';
+  saveData();
+  if(openSeriesId === s.id) renderDetail(s.id); // refresca la vista si seguís mirando la misma serie
 }
 
 async function renderProviders(s){
