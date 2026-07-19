@@ -1300,9 +1300,25 @@ function toggleEpisode(seriesId, seasonNumber, epIndex){
   const s = seriesList.find(x => x.id === seriesId);
   const se = s.seasons.find(x => x.number === seasonNumber);
   const willWatch = !se.watched[epIndex];
+  let extraMarked = 0;
+
+  if(willWatch){
+    const priorSeasons = s.seasons.filter(x => x.number < seasonNumber);
+    const priorUnwatchedCount =
+      priorSeasons.reduce((sum, x) => sum + x.watched.filter(w => !w).length, 0) +
+      se.watched.slice(0, epIndex).filter(w => !w).length;
+
+    if(priorUnwatchedCount > 0 && confirm(`Hay ${priorUnwatchedCount} capítulo${priorUnwatchedCount === 1 ? '' : 's'} anterior${priorUnwatchedCount === 1 ? '' : 'es'} sin marcar (contando temporadas anteriores). ¿Marcarlos también como vistos hasta este punto?`)){
+      priorSeasons.forEach(x => {
+        x.watched.forEach((w, i) => { if(!w){ x.watched[i] = true; extraMarked++; } });
+      });
+      for(let i = 0; i < epIndex; i++){ if(!se.watched[i]){ se.watched[i] = true; extraMarked++; } }
+    }
+  }
+
   se.watched[epIndex] = willWatch;
   s.lastActivity = Date.now();
-  if(willWatch) logActivity(s.id, 1);
+  if(willWatch) logActivity(s.id, 1 + extraMarked);
   saveData();
   render();
 }
