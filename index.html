@@ -1480,7 +1480,19 @@ async function openSeriesPreview(tmdbId){
   const backdrop = details.backdrop_path ? 'https://image.tmdb.org/t/p/w780' + details.backdrop_path : '';
   const year = (details.first_air_date || '').slice(0,4);
   const seasonCount = (details.seasons || []).filter(se => se.season_number > 0).length;
+  const episodeCount = details.number_of_episodes || null;
   const genres = (details.genres || []).map(g => g.name).slice(0,3).join(' · ');
+  const rating = (details.vote_average && details.vote_count > 0) ? Math.round(details.vote_average * 10) : null;
+
+  function formatFullDate(d){
+    if(!d) return '';
+    return new Date(d + 'T00:00:00').toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  const premiereText = details.first_air_date ? `Estrenó el ${formatFullDate(details.first_air_date)}` : '';
+  const endedStates = ['Ended', 'Canceled'];
+  const endedText = (endedStates.includes(details.status) && details.last_air_date)
+    ? `Dejó de emitirse el ${formatFullDate(details.last_air_date)}`
+    : '';
 
   const castHtml = (cast && cast.length)
     ? escapeHtml(cast.join(', '))
@@ -1499,10 +1511,15 @@ async function openSeriesPreview(tmdbId){
       <div class="preview-info">
         <p class="preview-title">${escapeHtml(details.name)}</p>
         <p class="preview-meta">${escapeHtml([year, genres].filter(Boolean).join(' · '))}</p>
-        <p class="preview-meta">${seasonCount} temporada${seasonCount === 1 ? '' : 's'} · ${escapeHtml(details.status || '')}</p>
+        <p class="preview-meta">${seasonCount} temporada${seasonCount === 1 ? '' : 's'}${episodeCount ? ` · ${episodeCount} episodios` : ''} · ${escapeHtml(details.status || '')}</p>
+        ${rating !== null ? `<span class="status-badge pendiente" style="margin-top:2px;"><span class="dot"></span>★ ${rating}% de aprobación</span>` : ''}
       </div>
     </div>
     <div class="preview-body">
+      ${(premiereText || endedText) ? `<div class="preview-block">
+        <div class="preview-block-label">Fechas</div>
+        <p class="preview-meta" style="font-size:12.5px;">${[premiereText, endedText].filter(Boolean).join(' · ')}</p>
+      </div>` : ''}
       <div class="preview-block">
         <div class="preview-block-label">Sinopsis</div>
         <p class="preview-overview">${escapeHtml(details.overview || 'Sin descripción disponible.')}</p>
