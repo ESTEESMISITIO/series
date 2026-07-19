@@ -996,7 +996,15 @@ function tmdbAuthed(url){
 
 // ---------------- tabs ----------------
 function switchTab(name){
-  if(name !== 'series') openSeriesId = null;
+  if(name !== 'series'){
+    openSeriesId = null;
+    const searchInput = document.getElementById('searchInput');
+    if(searchInput && searchInput.value){
+      searchInput.value = '';
+      document.getElementById('searchClearBtn').style.display = 'none';
+      closeSuggestions();
+    }
+  }
   document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
@@ -1471,6 +1479,12 @@ function openDetail(seriesId){
   if(activeSeasonBySeries[seriesId] == null && s.seasons.length){
     activeSeasonBySeries[seriesId] = next ? next.season : s.seasons[0].number;
   }
+  const searchInput = document.getElementById('searchInput');
+  if(searchInput && searchInput.value){
+    searchInput.value = '';
+    document.getElementById('searchClearBtn').style.display = 'none';
+    closeSuggestions();
+  }
   render();
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
@@ -1816,6 +1830,13 @@ async function openSeriesPreview(tmdbId){
 }
 function closeSeriesPreview(){
   document.getElementById('previewOverlay').classList.remove('open');
+  const searchInput = document.getElementById('searchInput');
+  if(searchInput && searchInput.value){
+    searchInput.value = '';
+    document.getElementById('searchClearBtn').style.display = 'none';
+    closeSuggestions();
+    render();
+  }
 }
 document.getElementById('previewOverlay').addEventListener('click', (e) => {
   if(e.target.id === 'previewOverlay') closeSeriesPreview();
