@@ -1068,7 +1068,8 @@ async function fetchSeasonEpisodes(tmdbId, seasonNumber){
     const eps = (data.episodes || []).map(e => ({
       n: e.episode_number,
       name: e.name || '',
-      air_date: e.air_date || ''
+      air_date: e.air_date || '',
+      runtime: e.runtime || null
     }));
     episodeCache[key] = eps;
     saveEpisodeCache();
@@ -1247,6 +1248,20 @@ function computeProgress(s){
 }
 function effectiveActivity(s){
   return Math.max(s.lastActivity || 0, s.importLastWatched || 0);
+}
+
+function getWatchedMinutes(s){
+  let minutes = 0;
+  s.seasons.forEach(se => {
+    const cachedEps = s.tmdbId ? episodeCache[`${s.tmdbId}:${se.number}`] : null;
+    se.watched.forEach((w, i) => {
+      if(!w) return;
+      const epNum = i + 1;
+      const cached = cachedEps ? cachedEps.find(e => e.n === epNum) : null;
+      minutes += (cached && cached.runtime) ? cached.runtime : (s.runtime || 40);
+    });
+  });
+  return minutes;
 }
 
 function computeStatus(s){
@@ -2164,7 +2179,7 @@ function renderStats2(){
   seriesList.forEach(s => {
     const { watched, total } = computeProgress(s);
     watchedEpisodes += watched;
-    totalMinutes += watched * (s.runtime || 40);
+    totalMinutes += getWatchedMinutes(s);
     const st = computeStatus(s);
     if(st === 'completada'){
       completed++;
@@ -2574,7 +2589,7 @@ function renderDashboard(){
   seriesList.forEach(s => {
     const { watched, total } = computeProgress(s);
     watchedEpisodes += watched;
-    totalMinutes += watched * (s.runtime || 40);
+    totalMinutes += getWatchedMinutes(s);
     const st = computeStatus(s);
     if(st === 'viendo'){ watching++; if(total) progressSum += (watched/total); }
     if(st === 'completada') completed++;
