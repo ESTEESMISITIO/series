@@ -256,7 +256,14 @@
   /* ---- Mis Series tab ---- */
   .toolbar{display:flex;gap:10px;margin:8px 0 14px;flex-wrap:wrap;}
   .search-box{flex:1 1 220px;position:relative;}
-  .search-box input{width:100%;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;padding:12px 14px 12px 38px;color:var(--text);font-size:14px;font-family:inherit;outline:none;}
+  .search-box input{width:100%;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;padding:12px 38px 12px 38px;color:var(--text);font-size:14px;font-family:inherit;outline:none;}
+  .search-clear-btn{
+    position:absolute;right:6px;top:50%;transform:translateY(-50%);
+    width:26px;height:26px;border-radius:50%;
+    background:var(--bg-soft);border:none;color:var(--muted);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+  }
+  .search-clear-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;}
   .search-box input:focus{border-color:var(--teal);}
   .search-box::before{content:none;}
   .search-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;}
@@ -281,7 +288,7 @@
   .add-form input:focus{border-color:var(--gold);}
   .autocomplete-wrap{position:relative;flex:1 1 200px;}
 
-  .suggestions{display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;z-index:20;max-height:320px;overflow-y:auto;box-shadow:0 12px 24px -8px #00000066;}
+  .suggestions{display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;z-index:20;max-height:230px;overflow-y:auto;box-shadow:0 12px 24px -8px #00000066;}
   .suggestions.open{display:block;}
   .sugg-status{padding:10px 12px;font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
   .sugg-item{padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-top:1px solid var(--line);}
@@ -826,6 +833,7 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
         <div class="search-box">
           <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input id="searchInput" type="text" placeholder="Buscar o agregar una serie..." autocomplete="off">
+          <button class="search-clear-btn" id="searchClearBtn" style="display:none;" title="Cerrar"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
         <div class="suggestions" id="suggestions"></div>
       </div>
@@ -1676,6 +1684,7 @@ function closeSuggestions(){ document.getElementById('suggestions').classList.re
 async function onSearchInput(e){
   render(); // filtra la grilla de "Mis series" con lo mismo que se escribe acá
   const query = e.target.value.trim();
+  document.getElementById('searchClearBtn').style.display = query ? 'flex' : 'none';
   clearTimeout(acTimer);
   if(query.length < 2){ closeSuggestions(); return; }
   if(!apiKey){ closeSuggestions(); return; }
@@ -1821,6 +1830,17 @@ function confirmAddFromPreview(tmdbId){
   openDetail(series.id);
 }
 document.getElementById('searchInput').addEventListener('input', onSearchInput);
+document.getElementById('searchClearBtn').addEventListener('click', () => {
+  const input = document.getElementById('searchInput');
+  input.value = '';
+  document.getElementById('searchClearBtn').style.display = 'none';
+  closeSuggestions();
+  render();
+  input.blur(); // en el celular, esto también baja el teclado
+});
+document.getElementById('searchInput').addEventListener('keydown', (e) => {
+  if(e.key === 'Escape'){ closeSuggestions(); e.target.blur(); }
+});
 document.addEventListener('click', (e) => { if(!e.target.closest('.autocomplete-wrap')) closeSuggestions(); });
 
 // ---------------- Importar historial (CSV tipo TV Time) ----------------
