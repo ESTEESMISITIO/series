@@ -1212,10 +1212,12 @@ async function syncSeries(seriesId){
 }
 function removeSeries(id){
   if(!confirm('¿Eliminar esta serie y todo su progreso?')) return;
+  const wasShared = seriesList.find(s => s.id === id)?.shared;
   seriesList = seriesList.filter(s => s.id !== id);
   if(openSeriesId === id) openSeriesId = null;
   saveData();
   render();
+  if(wasShared) pushSharedNow();
 }
 function toggleAbandoned(seriesId){
   const s = seriesList.find(x => x.id === seriesId);
@@ -2767,6 +2769,18 @@ function scheduleSharedPush(){
   sharedPushTimer = setTimeout(syncSharedSeries, 1200);
 }
 
+async function pushSharedNow(){
+  if(!supabaseClient || !currentSession) return;
+  if(!sharedRow) sharedRow = await fetchSharedRow();
+  if(!sharedRow || sharedRow.status !== 'accepted') return;
+  const mySharedNow = seriesList.filter(s => s.shared);
+  const { error } = await supabaseClient
+    .from('shared_series')
+    .update({ data: mySharedNow, updated_at: new Date().toISOString() })
+    .eq('id', sharedRow.id);
+  if(error) console.warn('Error subiendo series compartidas', error);
+}
+
 async function syncSharedSeries(){
   sharedRow = await fetchSharedRow();
   refreshPartnerUI();
@@ -2807,16 +2821,25 @@ async function syncSharedSeries(){
   if(error) console.warn('Error subiendo series compartidas', error);
 }
 
-function toggleShared(seriesId){
+async function toggleShared(seriesId){
   const s = seriesList.find(x => x.id === seriesId);
   if(!sharedRow || sharedRow.status !== 'accepted'){
     alert('Primero vincula tu cuenta con la de tu pareja desde el Perfil (sección "Compartir con tu pareja").');
     return;
   }
   s.shared = !s.shared;
-  saveData();
+  saveData(false);
+  scheduleCloudPush(); // guarda tu copia personal como siempre
   render();
-  syncSharedSeries();
+
+  if(s.shared){
+    // se está compartiendo por primera vez: trae lo que haya y combina
+    await syncSharedSeries();
+  } else {
+    // se está dejando de compartir: solo empuja tu estado actual, sin traer nada de la nube
+    // (si primero trajéramos, la versión vieja de la nube la volvería a marcar como compartida)
+    await pushSharedNow();
+  }
 }
 document.getElementById('resetSupaConfigBtn').addEventListener('click', () => {
   if(!confirm('Esto va a olvidar la configuración de Supabase guardada manualmente en este dispositivo y usar la que viene incluida en la app. Vas a tener que iniciar sesión de nuevo. ¿Continuar?')) return;
