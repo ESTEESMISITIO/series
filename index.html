@@ -714,11 +714,13 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
   <section class="tab-section" id="tab-series">
     <div id="listControls">
     <div class="toolbar">
-      <div class="search-box">
-        <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input id="searchInput" type="text" placeholder="Buscar en mis series...">
+      <div class="autocomplete-wrap" style="flex:1 1 220px;">
+        <div class="search-box">
+          <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="searchInput" type="text" placeholder="Buscar o agregar una serie..." autocomplete="off">
+        </div>
+        <div class="suggestions" id="suggestions"></div>
       </div>
-      <button class="btn btn-primary" id="toggleAddBtn">+ Agregar serie</button>
       <button class="btn btn-ghost" id="toggleImportBtn"><svg class="inline-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Importar historial</button>
     </div>
 
@@ -742,15 +744,6 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
           </div>
         </div>
       </div>
-    </div>
-
-    <div class="add-form" id="addForm">
-      <div class="autocomplete-wrap">
-        <input id="newSeriesTitle" type="text" placeholder="Escribí el título de la serie" maxlength="80" autocomplete="off">
-        <div class="suggestions" id="suggestions"></div>
-      </div>
-      <button class="btn btn-ghost" id="manualAddBtn">Agregar manual</button>
-      <button class="btn btn-ghost" id="cancelAddBtn">Cancelar</button>
     </div>
 
     <div class="stats-bar" id="statsBar"></div>
@@ -1410,61 +1403,55 @@ function setActiveSeason(seriesId, num){
   render();
 }
 
-// ---------------- autocomplete ----------------
+// ---------------- autocomplete (buscador único: filtra tu grilla y sugiere agregar) ----------------
 let acTimer = null, acLastQuery = '';
 function openSuggestions(html){ const box = document.getElementById('suggestions'); box.innerHTML = html; box.classList.add('open'); }
 function closeSuggestions(){ document.getElementById('suggestions').classList.remove('open'); }
 
-async function onTitleInput(e){
+async function onSearchInput(e){
+  render(); // filtra la grilla de "Mis series" con lo mismo que se escribe acá
   const query = e.target.value.trim();
-  const queryLower = query.toLowerCase();
   clearTimeout(acTimer);
   if(query.length < 2){ closeSuggestions(); return; }
+  if(!apiKey){ closeSuggestions(); return; }
 
-  // 1) resultados de tu propia bitácora: instantáneo, sin esperar a la red
-  const localMatches = seriesList.filter(s => s.title.toLowerCase().includes(queryLower)).slice(0, 5);
-  const localHtml = localMatches.length ? `<div class="sugg-group-label">En tu bitácora</div>` + localMatches.map(s => `
-    <div class="sugg-item local" onmousedown="pickLocalSeries('${s.id}')">
-      ${s.poster ? `<img class="sugg-poster" src="${s.poster}" alt="">` : `<div class="sugg-poster"></div>`}
-      <div class="sugg-text"><span class="sugg-title">${escapeHtml(s.title)}</span><span class="sugg-meta">ya la tienes · ir a la ficha</span></div>
-    </div>`).join('') : '';
-
-  if(!apiKey){
-    openSuggestions(localHtml || `<div class="sugg-status">Todavía no pegaste tu TMDB API key (ícono de perfil arriba). Puedes escribir el título y usar "Agregar manual".</div>`);
-    return;
-  }
-
-  openSuggestions(localHtml + `<div class="sugg-group-label">Buscando en TMDB...</div>`);
+  openSuggestions(`<div class="sugg-group-label">Buscando en TMDB para agregar...</div>`);
   acTimer = setTimeout(async () => {
     acLastQuery = query;
     const res = await tmdbSearchShows(query);
     if(query !== acLastQuery) return;
-    if(res.error === 'bad-key'){ openSuggestions(localHtml + `<div class="sugg-status">La API key no es válida. Revisala en tu perfil.</div>`); return; }
-    if(res.error){ openSuggestions(localHtml + `<div class="sugg-status">No se pudo conectar con TMDB (${escapeHtml(res.error)}).</div>`); return; }
+    if(res.error === 'bad-key'){ openSuggestions(`<div class="sugg-status">La API key no es válida. Revisala en tu perfil.</div>`); return; }
+    if(res.error){ openSuggestions(`<div class="sugg-status">No se pudo conectar con TMDB (${escapeHtml(res.error)}).</div>`); return; }
 
-    // 2) resultados nuevos de TMDB, excluyendo los que ya están en tu bitácora (ya se mostraron arriba)
+    // solo mostramos acá las que todavía NO tienes (las que ya tienes se ven filtradas en la grilla de abajo)
     const newResults = res.results.filter(show => !seriesList.some(s => s.tmdbId === show.id));
-    const newHtml = newResults.length ? `<div class="sugg-group-label">Agregar nueva</div>` + newResults.map(show => {
+    const manualLink = `<div class="sugg-item" onmousedown="quickManualAdd('${escapeHtml(query).replace(/'/g, "\\'")}')">
+      <div class="sugg-poster"></div>
+      <div class="sugg-text"><span class="sugg-title">Agregar "${escapeHtml(query)}" manual</span><span class="sugg-meta">si no está en la lista de abajo</span></div>
+    </div>`;
+
+    if(newResults.length === 0){
+      openSuggestions(`<div class="sugg-group-label">Agregar nueva</div><div class="sugg-status">Sin coincidencias nuevas en TMDB.</div>` + manualLink);
+      return;
+    }
+    const html = `<div class="sugg-group-label">Agregar nueva</div>` + newResults.map(show => {
       const year = (show.first_air_date || '').slice(0,4);
       const poster = show.poster_path ? TMDB_IMG + show.poster_path : '';
       return `<div class="sugg-item" onmousedown="openSeriesPreview(${show.id})">
         ${poster ? `<img class="sugg-poster" src="${poster}" alt="">` : `<div class="sugg-poster"></div>`}
         <div class="sugg-text"><span class="sugg-title">${escapeHtml(show.name)}</span><span class="sugg-meta">${escapeHtml(year)}</span></div>
       </div>`;
-    }).join('') : '';
-
-    const finalHtml = localHtml + newHtml;
-    if(!finalHtml){ openSuggestions(`<div class="sugg-status">Sin coincidencias para "${escapeHtml(query)}". Probá "Agregar manual".</div>`); return; }
-    openSuggestions(finalHtml);
+    }).join('') + manualLink;
+    openSuggestions(html);
   }, 400);
 }
 
-function pickLocalSeries(seriesId){
+function quickManualAdd(title){
   closeSuggestions();
-  document.getElementById('addForm').classList.remove('open');
-  document.getElementById('newSeriesTitle').value = '';
-  switchTab('series');
-  openDetail(seriesId);
+  if(!title) return;
+  addSeriesManual(title);
+  document.getElementById('searchInput').value = '';
+  render();
 }
 
 // ---------------- vista previa de serie nueva ----------------
@@ -1547,12 +1534,11 @@ function confirmAddFromPreview(tmdbId){
   if(!details || details.id !== tmdbId) return;
   const { series } = addSeriesFromTMDB(details);
   closeSeriesPreview();
-  document.getElementById('addForm').classList.remove('open');
-  document.getElementById('newSeriesTitle').value = '';
+  document.getElementById('searchInput').value = '';
   switchTab('series');
   openDetail(series.id);
 }
-document.getElementById('newSeriesTitle').addEventListener('input', onTitleInput);
+document.getElementById('searchInput').addEventListener('input', onSearchInput);
 document.addEventListener('click', (e) => { if(!e.target.closest('.autocomplete-wrap')) closeSuggestions(); });
 
 // ---------------- Importar historial (CSV tipo TV Time) ----------------
@@ -1889,27 +1875,6 @@ async function runImport(){
   startBtn.textContent = 'Iniciar importación';
 }
 document.getElementById('startImportBtn').addEventListener('click', runImport);
-
-document.getElementById('toggleAddBtn').addEventListener('click', () => {
-  const form = document.getElementById('addForm');
-  form.classList.toggle('open');
-  if(form.classList.contains('open')) document.getElementById('newSeriesTitle').focus();
-});
-document.getElementById('cancelAddBtn').addEventListener('click', () => {
-  document.getElementById('addForm').classList.remove('open');
-  document.getElementById('newSeriesTitle').value = '';
-  closeSuggestions();
-});
-document.getElementById('manualAddBtn').addEventListener('click', () => {
-  const input = document.getElementById('newSeriesTitle');
-  if(input.value.trim()){
-    addSeriesManual(input.value);
-    input.value = '';
-    document.getElementById('addForm').classList.remove('open');
-    closeSuggestions();
-  } else { input.focus(); }
-});
-document.getElementById('searchInput').addEventListener('input', render);
 
 // ---------------- Calendario ----------------
 function formatRelativeDate(dateStr){
