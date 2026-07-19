@@ -177,6 +177,38 @@
     font-family:'Bricolage Grotesque',serif;
     font-size:22px;font-weight:700;margin:0 0 16px;
   }
+  .streak-banner{
+    display:flex;align-items:center;gap:10px;
+    background:var(--gold-soft);border:1px solid var(--gold);
+    border-radius:12px;padding:10px 14px;margin-bottom:16px;
+  }
+  .streak-banner .flame{font-size:20px;line-height:1;}
+  .streak-banner strong{font-family:'Bricolage Grotesque',serif;font-size:15px;}
+  .streak-banner span.streak-sub{font-size:12px;color:var(--muted);}
+
+  .watch-time-card{
+    background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:16px;margin-bottom:16px;
+  }
+  .watch-time-label{
+    font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;
+    letter-spacing:.06em;color:var(--muted);margin-bottom:10px;
+  }
+  .watch-time-row{display:flex;gap:18px;flex-wrap:wrap;}
+  .watch-time-unit{text-align:center;}
+  .watch-time-unit .num{font-family:'Bricolage Grotesque',serif;font-size:26px;font-weight:700;color:var(--teal);}
+  .watch-time-unit .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;color:var(--muted);}
+
+  .weekly-highlight-card{
+    display:flex;gap:14px;align-items:center;
+    background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:14px;margin-bottom:16px;cursor:pointer;
+  }
+  .weekly-highlight-card:hover{border-color:var(--gold);}
+  .weekly-highlight-poster{width:56px;height:84px;border-radius:8px;object-fit:cover;background:var(--bg-soft);flex-shrink:0;}
+  .weekly-highlight-label{font-family:'JetBrains Mono',monospace;font-size:10.5px;text-transform:uppercase;color:var(--muted);letter-spacing:.05em;margin-bottom:3px;}
+  .weekly-highlight-title{font-family:'Bricolage Grotesque',serif;font-size:16px;font-weight:700;margin:0;}
+  .weekly-highlight-sub{font-size:12.5px;color:var(--gold);margin-top:2px;}
   .dash-section-title{
     font-family:'JetBrains Mono',monospace;
     font-size:11px;text-transform:uppercase;letter-spacing:.08em;
@@ -543,6 +575,17 @@
   .bar-fill{height:100%;background:linear-gradient(90deg,var(--teal),var(--gold));border-radius:5px;}
   .bar-val{width:32px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);flex-shrink:0;}
 
+  .activity-chart{display:flex;align-items:flex-end;gap:4px;height:90px;}
+  .activity-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;height:100%;justify-content:flex-end;gap:4px;}
+  .activity-bar{width:100%;max-width:18px;background:var(--gold);border-radius:3px 3px 0 0;min-height:2px;}
+  .activity-bar.today{background:var(--green);}
+  .activity-day-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);}
+
+  .record-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;}
+  .record-row:last-child{border-bottom:none;}
+  .record-row .rec-label{color:var(--muted);}
+  .record-row .rec-val{font-weight:600;text-align:right;}
+
   footer{text-align:center;color:var(--muted);font-size:12px;margin-top:20px;font-family:'JetBrains Mono',monospace;line-height:1.6;}
 
   /* ---- bottom nav ---- */
@@ -695,7 +738,10 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
   <!-- ===== TAB: INICIO ===== -->
   <section class="tab-section active" id="tab-home">
     <p class="dash-greeting" id="dashGreeting"></p>
+    <div id="streakBanner"></div>
     <div class="stats-bar" id="dashStats"></div>
+    <div id="watchTimeBlock"></div>
+    <div id="weeklyHighlight"></div>
 
     <div class="dash-section-title">
       <span>Seguir viendo</span>
@@ -774,12 +820,28 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
   <section class="tab-section" id="tab-stats">
     <div class="big-stat-row" id="bigStatsRow"></div>
     <div class="stat-block">
+      <h3>Actividad (últimos 14 días)</h3>
+      <div id="activityChart"></div>
+    </div>
+    <div class="stat-block">
       <h3>Géneros favoritos</h3>
       <div id="genreBars"></div>
     </div>
     <div class="stat-block">
+      <h3>Plataformas favoritas</h3>
+      <div id="platformBars"></div>
+    </div>
+    <div class="stat-block">
       <h3>Series por estado</h3>
       <div id="statusBars"></div>
+    </div>
+    <div class="stat-block">
+      <h3>Récords</h3>
+      <div id="recordsBlock"></div>
+    </div>
+    <div class="stat-block">
+      <h3>Reparto favorito</h3>
+      <div id="castBars"></div>
     </div>
   </section>
 
@@ -910,13 +972,22 @@ function saveProvidersCache(){
   try{ localStorage.setItem(PROVIDERS_CACHE_KEY, JSON.stringify(providersCache)); }catch(e){}
 }
 
+const CAST_CACHE_KEY = 'cast-cache';
+let castCache = {};
+try{ castCache = JSON.parse(localStorage.getItem(CAST_CACHE_KEY) || '{}'); }catch(e){ castCache = {}; }
+function saveCastCache(){ try{ localStorage.setItem(CAST_CACHE_KEY, JSON.stringify(castCache)); }catch(e){} }
+
 async function tmdbGetCredits(tmdbId){
+  if(castCache[tmdbId] !== undefined) return castCache[tmdbId];
   const { url, opts } = tmdbAuthed(`${TMDB_BASE}/tv/${tmdbId}/credits?language=es-ES`);
   try{
     const res = await fetch(url, opts);
     if(!res.ok) return null;
     const data = await res.json();
-    return (data.cast || []).slice(0, 6).map(c => c.name);
+    const names = (data.cast || []).slice(0, 6).map(c => c.name);
+    castCache[tmdbId] = names;
+    saveCastCache();
+    return names;
   }catch(e){ return null; }
 }
 
@@ -1091,11 +1162,81 @@ function removeSeason(seriesId, seasonNumber){
   saveData();
   render();
 }
+// ---------------- Registro de actividad (para racha, destacada de la semana, gráfico) ----------------
+const ACTIVITY_LOG_KEY = 'activity-log';
+let activityLog = [];
+try{ activityLog = JSON.parse(localStorage.getItem(ACTIVITY_LOG_KEY) || '[]'); }catch(e){ activityLog = []; }
+
+function dayString(ts){ return new Date(ts).toISOString().slice(0, 10); }
+
+function logActivity(seriesId, count = 1){
+  if(count <= 0) return;
+  activityLog.push({ ts: Date.now(), seriesId, count });
+  // poda: nos quedamos con los últimos 120 días para no crecer sin límite
+  const cutoff = Date.now() - 120 * 24 * 60 * 60 * 1000;
+  activityLog = activityLog.filter(e => e.ts >= cutoff);
+  try{ localStorage.setItem(ACTIVITY_LOG_KEY, JSON.stringify(activityLog)); }catch(e){}
+}
+
+function computeStreak(){
+  const days = new Set(activityLog.map(e => dayString(e.ts)));
+  const today = new Date(); today.setHours(0,0,0,0);
+  let cursor = new Date(today);
+  // si hoy no hay actividad todavía, la racha se cuenta desde ayer (no se rompe por no haber abierto la app hoy)
+  if(!days.has(dayString(cursor.getTime()))) cursor.setDate(cursor.getDate() - 1);
+  let streak = 0;
+  while(days.has(dayString(cursor.getTime()))){
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
+function getWeeklyHighlight(){
+  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const totals = {};
+  activityLog.filter(e => e.ts >= cutoff).forEach(e => {
+    totals[e.seriesId] = (totals[e.seriesId] || 0) + e.count;
+  });
+  const entries = Object.entries(totals).sort((a,b) => b[1] - a[1]);
+  if(entries.length === 0) return null;
+  const [seriesId, count] = entries[0];
+  const series = seriesList.find(s => s.id === seriesId);
+  if(!series) return null;
+  return { series, count };
+}
+
+function getDailyActivityCounts(days = 14){
+  const buckets = [];
+  const today = new Date(); today.setHours(0,0,0,0);
+  for(let i = days - 1; i >= 0; i--){
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    buckets.push({ date: d, key: dayString(d.getTime()), count: 0 });
+  }
+  const map = new Map(buckets.map(b => [b.key, b]));
+  activityLog.forEach(e => {
+    const b = map.get(dayString(e.ts));
+    if(b) b.count += e.count;
+  });
+  return buckets;
+}
+
+function formatWatchTime(totalMinutes){
+  let mins = Math.round(totalMinutes);
+  const months = Math.floor(mins / (30*24*60)); mins -= months * 30*24*60;
+  const days = Math.floor(mins / (24*60)); mins -= days * 24*60;
+  const hours = Math.floor(mins / 60); mins -= hours * 60;
+  return { months, days, hours, minutes: mins };
+}
+
 function toggleEpisode(seriesId, seasonNumber, epIndex){
   const s = seriesList.find(x => x.id === seriesId);
   const se = s.seasons.find(x => x.number === seasonNumber);
-  se.watched[epIndex] = !se.watched[epIndex];
+  const willWatch = !se.watched[epIndex];
+  se.watched[epIndex] = willWatch;
   s.lastActivity = Date.now();
+  if(willWatch) logActivity(s.id, 1);
   saveData();
   render();
 }
@@ -1308,7 +1449,10 @@ function renderDetail(seriesId){
 }
 
 async function backfillSeriesMeta(s){
-  const details = await tmdbGetShowDetails(s.tmdbId);
+  const [details] = await Promise.all([
+    tmdbGetShowDetails(s.tmdbId),
+    tmdbGetCredits(s.tmdbId) // se cachea solo, no necesitamos el resultado directo acá
+  ]);
   if(!details) return;
   if(!s.overview) s.overview = details.overview || '';
   if(!s.firstAirDate) s.firstAirDate = details.first_air_date || '';
@@ -1409,6 +1553,10 @@ function toggleWholeSeason(seriesId, seasonNumber){
   const s = seriesList.find(x => x.id === seriesId);
   const se = s.seasons.find(x => x.number === seasonNumber);
   const allWatched = se.watched.every(Boolean);
+  if(!allWatched){
+    const newlyWatched = se.watched.filter(w => !w).length;
+    logActivity(s.id, newlyWatched);
+  }
   se.watched = se.watched.map(() => !allWatched);
   s.lastActivity = Date.now();
   saveData();
@@ -2012,12 +2160,16 @@ document.getElementById('refreshDiscoverBtn').addEventListener('click', loadDisc
 function renderStats2(){
   let watchedEpisodes = 0, totalMinutes = 0, completed = 0, watching = 0, pending = 0;
   const genreCount = {};
+  let longest = null; // {title, episodes}
   seriesList.forEach(s => {
-    const { watched } = computeProgress(s);
+    const { watched, total } = computeProgress(s);
     watchedEpisodes += watched;
     totalMinutes += watched * (s.runtime || 40);
     const st = computeStatus(s);
-    if(st === 'completada') completed++;
+    if(st === 'completada'){
+      completed++;
+      if(!longest || total > longest.episodes) longest = { title: s.title, episodes: total };
+    }
     else if(st === 'viendo') watching++;
     else if(st === 'pendiente') pending++;
     (s.genres || []).forEach(g => { genreCount[g] = (genreCount[g] || 0) + 1; });
@@ -2030,6 +2182,20 @@ function renderStats2(){
     <div class="big-stat"><div class="num" style="color:var(--green)">${seriesList.length}</div><div class="lbl">series en total</div></div>
   `;
 
+  // actividad de los últimos 14 días
+  const daily = getDailyActivityCounts(14);
+  const maxDaily = Math.max(1, ...daily.map(d => d.count));
+  const todayKey = dayString(Date.now());
+  document.getElementById('activityChart').innerHTML = `
+    <div class="activity-chart">
+      ${daily.map(d => `
+        <div class="activity-bar-wrap">
+          <div class="activity-bar ${d.key === todayKey ? 'today' : ''}" style="height:${d.count ? Math.max(6, (d.count/maxDaily*100)) : 2}%" title="${d.count} episodio(s)"></div>
+          <div class="activity-day-lbl">${d.date.toLocaleDateString('es-CL', { day: 'numeric' })}</div>
+        </div>`).join('')}
+    </div>
+  `;
+
   const genres = Object.entries(genreCount).sort((a,b) => b[1]-a[1]).slice(0,6);
   const maxGenre = genres.length ? genres[0][1] : 1;
   document.getElementById('genreBars').innerHTML = genres.length
@@ -2039,7 +2205,28 @@ function renderStats2(){
           <div class="bar-track"><div class="bar-fill" style="width:${(count/maxGenre*100)}%"></div></div>
           <div class="bar-val">${count}</div>
         </div>`).join('')
-    : `<p class="sub">Agregá series desde TMDB para ver sus géneros acá.</p>`;
+    : `<p class="sub">Agrega series desde TMDB para ver sus géneros acá.</p>`;
+
+  // plataformas favoritas (a partir de lo que ya se cacheó al abrir cada ficha)
+  const platformCount = {};
+  seriesList.forEach(s => {
+    if(!s.tmdbId) return;
+    const cached = providersCache[s.tmdbId];
+    if(!cached) return;
+    [...(cached.flatrate || []), ...(cached.ads || [])].forEach(p => {
+      platformCount[p.name] = (platformCount[p.name] || 0) + 1;
+    });
+  });
+  const platforms = Object.entries(platformCount).sort((a,b) => b[1]-a[1]).slice(0,6);
+  const maxPlatform = platforms.length ? platforms[0][1] : 1;
+  document.getElementById('platformBars').innerHTML = platforms.length
+    ? platforms.map(([name, count]) => `
+        <div class="bar-row">
+          <div class="bar-label">${escapeHtml(name)}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${(count/maxPlatform*100)}%;background:var(--teal)"></div></div>
+          <div class="bar-val">${count}</div>
+        </div>`).join('')
+    : `<p class="sub">Abre algunas fichas de series (sección "Dónde verla") para que aparezcan acá.</p>`;
 
   const statusData = [['Viendo', watching, 'var(--teal)'], ['Pendientes', pending, 'var(--gold)'], ['Completadas', completed, 'var(--green)']];
   const maxStatus = Math.max(1, ...statusData.map(x => x[1]));
@@ -2049,6 +2236,32 @@ function renderStats2(){
       <div class="bar-track"><div class="bar-fill" style="width:${(count/maxStatus*100)}%;background:${color}"></div></div>
       <div class="bar-val">${count}</div>
     </div>`).join('');
+
+  // récords
+  const streak = computeStreak();
+  document.getElementById('recordsBlock').innerHTML = `
+    <div class="record-row"><span class="rec-label">Serie más larga completada</span><span class="rec-val">${longest ? `${escapeHtml(longest.title)} (${longest.episodes} eps.)` : '—'}</span></div>
+    <div class="record-row"><span class="rec-label">Racha actual</span><span class="rec-val">${streak} día${streak === 1 ? '' : 's'}</span></div>
+  `;
+
+  // reparto favorito (a partir de lo que ya se cacheó al abrir cada ficha)
+  const castCount = {};
+  seriesList.forEach(s => {
+    if(!s.tmdbId) return;
+    const cached = castCache[s.tmdbId];
+    if(!cached) return;
+    cached.forEach(name => { castCount[name] = (castCount[name] || 0) + 1; });
+  });
+  const castTop = Object.entries(castCount).filter(([,c]) => c > 1).sort((a,b) => b[1]-a[1]).slice(0,6);
+  const maxCast = castTop.length ? castTop[0][1] : 1;
+  document.getElementById('castBars').innerHTML = castTop.length
+    ? castTop.map(([name, count]) => `
+        <div class="bar-row">
+          <div class="bar-label">${escapeHtml(name)}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${(count/maxCast*100)}%;background:var(--green)"></div></div>
+          <div class="bar-val">${count}</div>
+        </div>`).join('')
+    : `<p class="sub">Todavía no encontré actores repetidos entre tus series. Se completa solo a medida que abres fichas.</p>`;
 }
 
 // ---------------- PWA ----------------
@@ -2357,19 +2570,61 @@ function renderDashboard(){
   document.getElementById('dashGreeting').textContent = saludo;
 
   // stats resumidas
-  let watchedEpisodes = 0, watching = 0, completed = 0;
+  let watchedEpisodes = 0, watching = 0, completed = 0, totalMinutes = 0, progressSum = 0;
   seriesList.forEach(s => {
-    const { watched } = computeProgress(s);
+    const { watched, total } = computeProgress(s);
     watchedEpisodes += watched;
+    totalMinutes += watched * (s.runtime || 40);
     const st = computeStatus(s);
-    if(st === 'viendo') watching++;
+    if(st === 'viendo'){ watching++; if(total) progressSum += (watched/total); }
     if(st === 'completada') completed++;
   });
+  const avgProgress = watching ? Math.round((progressSum / watching) * 100) : 0;
+
   document.getElementById('dashStats').innerHTML = `
     <div class="stat-chip"><div class="stat-num gold">${watchedEpisodes}</div><div class="stat-label">episodios vistos</div></div>
-    <div class="stat-chip"><div class="stat-num teal">${watching}</div><div class="stat-label">viendo ahora</div></div>
+    <div class="stat-chip"><div class="stat-num teal">${watching}</div><div class="stat-label">viendo ahora${watching ? ` · ${avgProgress}% avance prom.` : ''}</div></div>
     <div class="stat-chip"><div class="stat-num green">${completed}</div><div class="stat-label">completadas</div></div>
   `;
+
+  // racha de días activo
+  const streak = computeStreak();
+  document.getElementById('streakBanner').innerHTML = streak > 0
+    ? `<div class="streak-banner"><span class="flame">🔥</span><div><strong>${streak} día${streak === 1 ? '' : 's'} seguido${streak === 1 ? '' : 's'}</strong><br><span class="streak-sub">marcando episodios en la app</span></div></div>`
+    : '';
+
+  // tiempo total viendo series, desglosado
+  const wt = formatWatchTime(totalMinutes);
+  document.getElementById('watchTimeBlock').innerHTML = `
+    <div class="watch-time-card">
+      <div class="watch-time-label">Tiempo total viendo series</div>
+      <div class="watch-time-row">
+        <div class="watch-time-unit"><div class="num">${wt.months}</div><div class="lbl">meses</div></div>
+        <div class="watch-time-unit"><div class="num">${wt.days}</div><div class="lbl">días</div></div>
+        <div class="watch-time-unit"><div class="num">${wt.hours}</div><div class="lbl">horas</div></div>
+        <div class="watch-time-unit"><div class="num">${wt.minutes}</div><div class="lbl">minutos</div></div>
+      </div>
+    </div>
+  `;
+
+  // serie destacada de la semana
+  const highlight = getWeeklyHighlight();
+  const hlBox = document.getElementById('weeklyHighlight');
+  if(highlight){
+    const poster = highlight.series.poster ? `<img class="weekly-highlight-poster" src="${highlight.series.poster}" alt="">` : `<div class="weekly-highlight-poster"></div>`;
+    hlBox.innerHTML = `
+      <div class="weekly-highlight-card" onclick="goToSeries('${highlight.series.id}')">
+        ${poster}
+        <div>
+          <div class="weekly-highlight-label">Destacada de la semana</div>
+          <p class="weekly-highlight-title">${escapeHtml(highlight.series.title)}</p>
+          <p class="weekly-highlight-sub">${highlight.count} episodio${highlight.count === 1 ? '' : 's'} esta semana</p>
+        </div>
+      </div>
+    `;
+  } else {
+    hlBox.innerHTML = '';
+  }
 
   // seguir viendo: solo las 5 últimas con actividad real en la plataforma
   const enCurso = seriesList
