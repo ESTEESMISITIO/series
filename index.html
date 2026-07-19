@@ -253,6 +253,35 @@
   .suggestions.open{display:block;}
   .sugg-status{padding:10px 12px;font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
   .sugg-item{padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-top:1px solid var(--line);}
+  .sugg-group-label{
+    padding:7px 12px 4px;font-family:'JetBrains Mono',monospace;font-size:10px;
+    text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+    background:var(--bg-soft);
+  }
+  .sugg-item.local .sugg-title{color:var(--gold);}
+
+  /* ---- Vista previa de serie nueva (antes de agregar) ---- */
+  .preview-overlay{position:fixed;inset:0;background:#00000066;z-index:210;display:none;align-items:flex-end;justify-content:center;}
+  .preview-overlay.open{display:flex;}
+  @media (min-width:640px){ .preview-overlay{align-items:center;} }
+  .preview-sheet{
+    background:var(--card);width:100%;max-width:520px;max-height:88vh;overflow-y:auto;
+    border-radius:20px 20px 0 0;border:1px solid var(--line);
+  }
+  @media (min-width:640px){ .preview-sheet{border-radius:16px;max-height:82vh;} }
+  .preview-hero{position:relative;padding:18px;display:flex;gap:14px;}
+  .preview-backdrop{position:absolute;inset:0;background-size:cover;background-position:center top;opacity:.16;border-radius:20px 20px 0 0;}
+  .preview-poster{width:96px;height:144px;border-radius:8px;object-fit:cover;background:var(--bg-soft);flex-shrink:0;position:relative;}
+  .preview-info{position:relative;flex:1;min-width:0;}
+  .preview-title{font-family:'Bricolage Grotesque',serif;font-size:20px;font-weight:700;margin:0 0 4px;}
+  .preview-meta{font-size:12px;color:var(--muted);margin-bottom:6px;}
+  .preview-close{position:absolute;top:12px;right:12px;z-index:2;}
+  .preview-body{padding:0 18px 18px;}
+  .preview-block{margin-bottom:14px;}
+  .preview-block-label{font-family:'JetBrains Mono',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px;}
+  .preview-overview{font-size:13px;line-height:1.5;color:var(--text);}
+  .preview-cast{font-size:13px;color:var(--text);}
+  .preview-actions{display:flex;gap:8px;flex-wrap:wrap;padding:14px 18px 18px;border-top:1px solid var(--line);}
   .sugg-item:first-child{border-top:none;}
   .sugg-item:hover{background:var(--bg-soft);}
   .sugg-poster{width:32px;height:48px;border-radius:4px;object-fit:cover;background:var(--bg-soft);flex-shrink:0;}
@@ -557,6 +586,10 @@
     </div>
     <button class="gear-btn" id="profileBtn" title="Perfil y configuración"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
   </header>
+
+  <div class="preview-overlay" id="previewOverlay">
+    <div class="preview-sheet" id="previewSheet"></div>
+  </div>
 
   <div class="profile-overlay" id="profileOverlay">
     <div class="profile-sheet">
@@ -882,6 +915,16 @@ let providersCache = {};
 try{ providersCache = JSON.parse(localStorage.getItem(PROVIDERS_CACHE_KEY) || '{}'); }catch(e){ providersCache = {}; }
 function saveProvidersCache(){
   try{ localStorage.setItem(PROVIDERS_CACHE_KEY, JSON.stringify(providersCache)); }catch(e){}
+}
+
+async function tmdbGetCredits(tmdbId){
+  const { url, opts } = tmdbAuthed(`${TMDB_BASE}/tv/${tmdbId}/credits?language=es-ES`);
+  try{
+    const res = await fetch(url, opts);
+    if(!res.ok) return null;
+    const data = await res.json();
+    return (data.cast || []).slice(0, 6).map(c => c.name);
+  }catch(e){ return null; }
 }
 
 async function tmdbGetWatchProviders(tmdbId){
@@ -1374,42 +1417,140 @@ function closeSuggestions(){ document.getElementById('suggestions').classList.re
 
 async function onTitleInput(e){
   const query = e.target.value.trim();
+  const queryLower = query.toLowerCase();
   clearTimeout(acTimer);
   if(query.length < 2){ closeSuggestions(); return; }
-  if(!apiKey){ openSuggestions(`<div class="sugg-status">Todavía no pegaste tu TMDB API key (ícono de perfil arriba). Puedes escribir el título y usar "Agregar manual".</div>`); return; }
-  openSuggestions(`<div class="sugg-status">Buscando en TMDB...</div>`);
+
+  // 1) resultados de tu propia bitácora: instantáneo, sin esperar a la red
+  const localMatches = seriesList.filter(s => s.title.toLowerCase().includes(queryLower)).slice(0, 5);
+  const localHtml = localMatches.length ? `<div class="sugg-group-label">En tu bitácora</div>` + localMatches.map(s => `
+    <div class="sugg-item local" onmousedown="pickLocalSeries('${s.id}')">
+      ${s.poster ? `<img class="sugg-poster" src="${s.poster}" alt="">` : `<div class="sugg-poster"></div>`}
+      <div class="sugg-text"><span class="sugg-title">${escapeHtml(s.title)}</span><span class="sugg-meta">ya la tienes · ir a la ficha</span></div>
+    </div>`).join('') : '';
+
+  if(!apiKey){
+    openSuggestions(localHtml || `<div class="sugg-status">Todavía no pegaste tu TMDB API key (ícono de perfil arriba). Puedes escribir el título y usar "Agregar manual".</div>`);
+    return;
+  }
+
+  openSuggestions(localHtml + `<div class="sugg-group-label">Buscando en TMDB...</div>`);
   acTimer = setTimeout(async () => {
     acLastQuery = query;
     const res = await tmdbSearchShows(query);
     if(query !== acLastQuery) return;
-    if(res.error === 'bad-key'){ openSuggestions(`<div class="sugg-status">La API key no es válida. Revisala en tu perfil.</div>`); return; }
-    if(res.error){ openSuggestions(`<div class="sugg-status">No se pudo conectar con TMDB (${escapeHtml(res.error)}). Puedes agregar la serie manual.</div>`); return; }
-    if(res.results.length === 0){ openSuggestions(`<div class="sugg-status">Sin coincidencias para "${escapeHtml(query)}". Probá "Agregar manual".</div>`); return; }
-    const html = res.results.map(show => {
+    if(res.error === 'bad-key'){ openSuggestions(localHtml + `<div class="sugg-status">La API key no es válida. Revisala en tu perfil.</div>`); return; }
+    if(res.error){ openSuggestions(localHtml + `<div class="sugg-status">No se pudo conectar con TMDB (${escapeHtml(res.error)}).</div>`); return; }
+
+    // 2) resultados nuevos de TMDB, excluyendo los que ya están en tu bitácora (ya se mostraron arriba)
+    const newResults = res.results.filter(show => !seriesList.some(s => s.tmdbId === show.id));
+    const newHtml = newResults.length ? `<div class="sugg-group-label">Agregar nueva</div>` + newResults.map(show => {
       const year = (show.first_air_date || '').slice(0,4);
       const poster = show.poster_path ? TMDB_IMG + show.poster_path : '';
-      const already = seriesList.some(s => s.tmdbId === show.id);
-      return `<div class="sugg-item" onmousedown="chooseSuggestion(${show.id})">
+      return `<div class="sugg-item" onmousedown="openSeriesPreview(${show.id})">
         ${poster ? `<img class="sugg-poster" src="${poster}" alt="">` : `<div class="sugg-poster"></div>`}
-        <div class="sugg-text"><span class="sugg-title">${escapeHtml(show.name)}</span><span class="sugg-meta">${escapeHtml(year)}${already ? ' · ya la tienes' : ''}</span></div>
+        <div class="sugg-text"><span class="sugg-title">${escapeHtml(show.name)}</span><span class="sugg-meta">${escapeHtml(year)}</span></div>
       </div>`;
-    }).join('');
-    openSuggestions(html);
+    }).join('') : '';
+
+    const finalHtml = localHtml + newHtml;
+    if(!finalHtml){ openSuggestions(`<div class="sugg-status">Sin coincidencias para "${escapeHtml(query)}". Probá "Agregar manual".</div>`); return; }
+    openSuggestions(finalHtml);
   }, 400);
 }
-async function chooseSuggestion(tmdbId){
+
+function pickLocalSeries(seriesId){
   closeSuggestions();
-  document.getElementById('newSeriesTitle').value = 'Cargando...';
-  const details = await tmdbGetShowDetails(tmdbId);
   document.getElementById('addForm').classList.remove('open');
   document.getElementById('newSeriesTitle').value = '';
-  if(!details){ alert('No se pudo cargar el detalle de la serie. Probá de nuevo.'); return; }
-  const { series, wasNew } = addSeriesFromTMDB(details);
-  if(!wasNew){
-    alert(`Ya tienes "${series.title}" en tu bitácora. Te lleva a su ficha.`);
-    switchTab('series');
-    openDetail(series.id);
+  switchTab('series');
+  openDetail(seriesId);
+}
+
+// ---------------- vista previa de serie nueva ----------------
+async function openSeriesPreview(tmdbId){
+  closeSuggestions();
+  const overlay = document.getElementById('previewOverlay');
+  const sheet = document.getElementById('previewSheet');
+  overlay.classList.add('open');
+  sheet.innerHTML = `<div class="ep-loading">Cargando información de la serie...</div>`;
+
+  const [details, cast, providers] = await Promise.all([
+    tmdbGetShowDetails(tmdbId),
+    tmdbGetCredits(tmdbId),
+    tmdbGetWatchProviders(tmdbId)
+  ]);
+
+  if(!details){
+    sheet.innerHTML = `<div style="padding:24px;">
+      <p class="sub">No se pudo cargar la información de esta serie. Probá de nuevo.</p>
+      <button class="btn btn-ghost" onclick="closeSeriesPreview()">Cerrar</button>
+    </div>`;
+    return;
   }
+
+  const poster = details.poster_path ? TMDB_IMG + details.poster_path : '';
+  const backdrop = details.backdrop_path ? 'https://image.tmdb.org/t/p/w780' + details.backdrop_path : '';
+  const year = (details.first_air_date || '').slice(0,4);
+  const seasonCount = (details.seasons || []).filter(se => se.season_number > 0).length;
+  const genres = (details.genres || []).map(g => g.name).slice(0,3).join(' · ');
+
+  const castHtml = (cast && cast.length)
+    ? escapeHtml(cast.join(', '))
+    : '<span style="color:var(--muted);">No encontré el reparto.</span>';
+
+  const provList = providers ? [...providers.flatrate, ...providers.ads] : [];
+  const providersHtml = provList.length
+    ? provList.map(p => `<div class="provider-chip"><img class="provider-logo" src="${p.logo}" alt=""><span class="provider-name">${escapeHtml(p.name)}</span></div>`).join('')
+    : '<span style="color:var(--muted);font-size:12.5px;">No encontré dónde verla en Chile ahora mismo.</span>';
+
+  sheet.innerHTML = `
+    <div class="preview-hero">
+      ${backdrop ? `<div class="preview-backdrop" style="background-image:url('${backdrop}')"></div>` : ''}
+      <button class="icon-btn preview-close" onclick="closeSeriesPreview()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      ${poster ? `<img class="preview-poster" src="${poster}" alt="">` : `<div class="preview-poster"></div>`}
+      <div class="preview-info">
+        <p class="preview-title">${escapeHtml(details.name)}</p>
+        <p class="preview-meta">${escapeHtml([year, genres].filter(Boolean).join(' · '))}</p>
+        <p class="preview-meta">${seasonCount} temporada${seasonCount === 1 ? '' : 's'} · ${escapeHtml(details.status || '')}</p>
+      </div>
+    </div>
+    <div class="preview-body">
+      <div class="preview-block">
+        <div class="preview-block-label">Sinopsis</div>
+        <p class="preview-overview">${escapeHtml(details.overview || 'Sin descripción disponible.')}</p>
+      </div>
+      <div class="preview-block">
+        <div class="preview-block-label">Reparto</div>
+        <p class="preview-cast">${castHtml}</p>
+      </div>
+      <div class="preview-block">
+        <div class="preview-block-label">Dónde verla (Chile)</div>
+        <div class="providers-row">${providersHtml}</div>
+      </div>
+    </div>
+    <div class="preview-actions">
+      <button class="btn btn-primary" onclick="confirmAddFromPreview(${details.id})">+ Agregar a mi bitácora</button>
+      <a class="btn btn-ghost" href="https://www.themoviedb.org/tv/${details.id}" target="_blank" rel="noopener">Ver más en TMDB</a>
+    </div>
+  `;
+  window._previewDetails = details;
+}
+function closeSeriesPreview(){
+  document.getElementById('previewOverlay').classList.remove('open');
+}
+document.getElementById('previewOverlay').addEventListener('click', (e) => {
+  if(e.target.id === 'previewOverlay') closeSeriesPreview();
+});
+function confirmAddFromPreview(tmdbId){
+  const details = window._previewDetails;
+  if(!details || details.id !== tmdbId) return;
+  const { series } = addSeriesFromTMDB(details);
+  closeSeriesPreview();
+  document.getElementById('addForm').classList.remove('open');
+  document.getElementById('newSeriesTitle').value = '';
+  switchTab('series');
+  openDetail(series.id);
 }
 document.getElementById('newSeriesTitle').addEventListener('input', onTitleInput);
 document.addEventListener('click', (e) => { if(!e.target.closest('.autocomplete-wrap')) closeSuggestions(); });
