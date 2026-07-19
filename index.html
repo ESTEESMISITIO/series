@@ -613,13 +613,7 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
               <button class="btn btn-primary btn-sm" id="syncNowBtn"><svg class="inline-icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>Sincronizar ahora</button>
               <button class="btn btn-ghost btn-sm" id="signOutBtn">Cerrar sesión</button>
             </div>
-            <div id="conflictChoice" style="display:none;margin-top:10px;background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:10px;">
-              <p style="margin:0 0 8px;font-size:12px;">Encontré datos guardados en la nube distintos a los de este dispositivo. ¿Cuáles usamos?</p>
-              <div style="display:flex;gap:8px;">
-                <button class="btn btn-primary btn-sm" id="useCloudBtn">Usar los de la nube</button>
-                <button class="btn btn-ghost btn-sm" id="useLocalBtn">Usar los de este dispositivo</button>
-              </div>
-            </div>
+            <button class="btn btn-ghost btn-sm" id="resetSupaConfigBtn" style="margin-top:8px;display:none;">Quitar configuración manual y usar la de la app</button>
           </div>
         </div>
         <div class="key-status" id="syncStatus"></div>
@@ -1972,15 +1966,21 @@ function refreshSyncUI(){
   document.getElementById('syncAuthBlock').style.display = configured ? 'block' : 'none';
   if(!configured){ setSyncStatus('Todavía sin configurar.', false); return; }
 
+  const projectHost = (supaUrl || '').replace(/^https?:\/\//, '').split('.')[0];
+  const usingOverride = !!(localStorage.getItem(SUPA_URL_KEY) || localStorage.getItem(SUPA_ANON_KEY));
+  document.getElementById('resetSupaConfigBtn').style.display = usingOverride ? 'inline-block' : 'none';
+
   if(currentSession){
     document.getElementById('authLoggedOut').style.display = 'none';
     document.getElementById('authLoggedIn').style.display = 'block';
-    document.getElementById('loggedInAs').textContent = `Conectado como ${currentSession.user.email}`;
+    document.getElementById('loggedInAs').innerHTML =
+      `Conectado como ${escapeHtml(currentSession.user.email)}<br>` +
+      `<span style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;">proyecto: ${escapeHtml(projectHost)}${usingOverride ? ' (config. manual en este dispositivo)' : ''}</span>`;
     setSyncStatus('Sincronización activa ✓', true);
   } else {
     document.getElementById('authLoggedOut').style.display = 'block';
     document.getElementById('authLoggedIn').style.display = 'none';
-    setSyncStatus('Configurado, pero no iniciaste sesión todavía.', false);
+    setSyncStatus(`Configurado (proyecto: ${projectHost}), pero no iniciaste sesión todavía.`, false);
   }
 }
 
@@ -2070,39 +2070,55 @@ function scheduleCloudPush(){
   pushTimer = setTimeout(pushToCloud, 1200);
 }
 
+function seriesKey(s){
+  return s.tmdbId ? ('tmdb:' + s.tmdbId) : ('title:' + normalizeTitle(s.title));
+}
+
+function mergeSeriesLists(localList, cloudList){
+  const map = new Map();
+  localList.forEach(s => map.set(seriesKey(s), { ...s, seasons: s.seasons.map(se => ({ ...se, watched: se.watched.slice() })) }));
+  cloudList.forEach(cs => {
+    const key = seriesKey(cs);
+    const existing = map.get(key);
+    if(!existing){
+      map.set(key, { ...cs, seasons: cs.seasons.map(se => ({ ...se, watched: se.watched.slice() })) });
+    } else {
+      mergeSeriesInto(existing, cs);
+    }
+  });
+  return [...map.values()];
+}
+
 async function handlePostLoginSync(){
   const cloudData = await fetchCloudData();
-  const localHasData = seriesList.length > 0;
   const cloudHasData = Array.isArray(cloudData) && cloudData.length > 0;
 
-  if(cloudHasData && localHasData && JSON.stringify(cloudData) !== JSON.stringify(seriesList)){
-    // conflicto real: dejamos que el usuario elija
-    document.getElementById('conflictChoice').style.display = 'block';
-    document.getElementById('conflictChoice').dataset.cloud = JSON.stringify(cloudData);
-  } else if(cloudHasData && !localHasData){
-    seriesList = cloudData;
-    saveData(false);
-    render();
-    setSyncStatus('Traje tus series desde la nube ✓', true);
-  } else if(!cloudHasData){
-    await pushToCloud();
+  if(!cloudHasData){
+    if(seriesList.length > 0) await pushToCloud();
+    else setSyncStatus('Sincronización activa ✓', true);
+    return;
+  }
+
+  const merged = mergeSeriesLists(seriesList, cloudData);
+  const changed = JSON.stringify(merged) !== JSON.stringify(seriesList);
+  seriesList = merged;
+  saveData(false);
+  render();
+
+  if(changed){
+    setSyncStatus('Combiné los datos de este dispositivo con la nube ✓', true);
+    await pushToCloud(); // sube el resultado combinado, así los demás dispositivos también lo reciben
   } else {
     setSyncStatus('Ya estaba todo sincronizado ✓', true);
   }
 }
-document.getElementById('useCloudBtn').addEventListener('click', () => {
-  const box = document.getElementById('conflictChoice');
-  seriesList = JSON.parse(box.dataset.cloud);
-  saveData(false);
-  render();
-  box.style.display = 'none';
-  setSyncStatus('Usando los datos de la nube ✓', true);
-});
-document.getElementById('useLocalBtn').addEventListener('click', async () => {
-  document.getElementById('conflictChoice').style.display = 'none';
-  await pushToCloud();
-});
 document.getElementById('syncNowBtn').addEventListener('click', pushToCloud);
+document.getElementById('resetSupaConfigBtn').addEventListener('click', () => {
+  if(!confirm('Esto va a olvidar la configuración de Supabase guardada manualmente en este dispositivo y usar la que viene incluida en la app. Vas a tener que iniciar sesión de nuevo. ¿Continuar?')) return;
+  localStorage.removeItem(SUPA_URL_KEY);
+  localStorage.removeItem(SUPA_ANON_KEY);
+  window.location.reload();
+});
 
 // ---------------- Pantalla de login ----------------
 let loginMode = 'signin'; // 'signin' | 'signup'
