@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Series Tracker</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#F7F1E3">
@@ -604,6 +604,23 @@
   }
   .nav-btn .nav-icon{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
   .nav-btn.active{color:#F1B24A;opacity:1;}
+  /* ---- Arreglos para iPhone/Safari: evita el zoom automático y respeta el notch ---- */
+  input, textarea, select{ font-size:16px !important; }
+  body{
+    padding-left:calc(20px + env(safe-area-inset-left));
+    padding-right:calc(20px + env(safe-area-inset-right));
+    padding-top:calc(24px + env(safe-area-inset-top));
+  }
+  .bottom-nav{
+    padding-bottom:env(safe-area-inset-bottom);
+    height:calc(var(--nav-h) + env(safe-area-inset-bottom));
+  }
+  .login-screen{
+    padding-left:calc(24px + env(safe-area-inset-left));
+    padding-right:calc(24px + env(safe-area-inset-right));
+    padding-top:env(safe-area-inset-top);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
 </style>
 </head>
 <body>
