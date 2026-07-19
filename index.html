@@ -649,7 +649,7 @@
     <div>
       <p class="eyebrow">// registro personal</p>
       <h1>Series Tracker</h1>
-      <p class="sub" id="pageSub">Buscá series reales, marcá episodios y no perdás nunca en cuál vas.</p>
+      <p class="sub" id="pageSub">Busca series reales, marca episodios y no pierdas nunca en cuál vas.</p>
     </div>
     <button class="gear-btn" id="profileBtn" title="Perfil y configuración"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
   </header>
@@ -982,6 +982,9 @@ function saveData(sync = true){
   }
 }
 function uid(){ return Math.random().toString(36).slice(2,10); }
+function fmt(n){
+  return Number(n).toLocaleString('es-CL');
+}
 function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -1394,10 +1397,10 @@ function renderStats(){
     if(st === 'viendo') watching++;
   });
   document.getElementById('statsBar').innerHTML = `
-    <div class="stat-chip"><div class="stat-num">${totalSeries}</div><div class="stat-label">series</div></div>
-    <div class="stat-chip"><div class="stat-num gold">${watchedEpisodes}</div><div class="stat-label">episodios vistos</div></div>
-    <div class="stat-chip"><div class="stat-num teal">${watching}</div><div class="stat-label">viendo ahora</div></div>
-    <div class="stat-chip"><div class="stat-num green">${completed}</div><div class="stat-label">completadas</div></div>
+    <div class="stat-chip"><div class="stat-num">${fmt(totalSeries)}</div><div class="stat-label">series</div></div>
+    <div class="stat-chip"><div class="stat-num gold">${fmt(watchedEpisodes)}</div><div class="stat-label">episodios vistos</div></div>
+    <div class="stat-chip"><div class="stat-num teal">${fmt(watching)}</div><div class="stat-label">viendo ahora</div></div>
+    <div class="stat-chip"><div class="stat-num green">${fmt(completed)}</div><div class="stat-label">completadas</div></div>
   `;
 }
 
@@ -2320,9 +2323,9 @@ function renderStats2(){
   const totalHours = Math.round(totalMinutes / 60);
 
   document.getElementById('bigStatsRow').innerHTML = `
-    <div class="big-stat"><div class="num" style="color:var(--gold)">${watchedEpisodes}</div><div class="lbl">episodios</div></div>
-    <div class="big-stat"><div class="num" style="color:var(--teal)">${totalHours}</div><div class="lbl">horas estimadas</div></div>
-    <div class="big-stat"><div class="num" style="color:var(--green)">${seriesList.length}</div><div class="lbl">series en total</div></div>
+    <div class="big-stat"><div class="num" style="color:var(--gold)">${fmt(watchedEpisodes)}</div><div class="lbl">episodios</div></div>
+    <div class="big-stat"><div class="num" style="color:var(--teal)">${fmt(totalHours)}</div><div class="lbl">horas estimadas</div></div>
+    <div class="big-stat"><div class="num" style="color:var(--green)">${fmt(seriesList.length)}</div><div class="lbl">series en total</div></div>
   `;
 
   // actividad de los últimos 14 días
@@ -2947,7 +2950,7 @@ function renderPosterCard(s){
 function renderDashboard(){
   const hour = new Date().getHours();
   const saludo = hour < 6 ? 'Buenas noches' : hour < 13 ? 'Buenos días' : hour < 20 ? 'Buenas tardes' : 'Buenas noches';
-  document.getElementById('dashGreeting').textContent = saludo;
+  document.getElementById('dashGreeting').textContent = myName ? `${saludo}, ${myName}` : saludo;
 
   // stats resumidas
   let watchedEpisodes = 0, watching = 0, completed = 0, totalMinutes = 0, progressSum = 0;
@@ -2962,9 +2965,9 @@ function renderDashboard(){
   const avgProgress = watching ? Math.round((progressSum / watching) * 100) : 0;
 
   document.getElementById('dashStats').innerHTML = `
-    <div class="stat-chip"><div class="stat-num gold">${watchedEpisodes}</div><div class="stat-label">episodios vistos</div></div>
-    <div class="stat-chip"><div class="stat-num teal">${watching}</div><div class="stat-label">viendo ahora${watching ? ` · ${avgProgress}% avance prom.` : ''}</div></div>
-    <div class="stat-chip"><div class="stat-num green">${completed}</div><div class="stat-label">completadas</div></div>
+    <div class="stat-chip"><div class="stat-num gold">${fmt(watchedEpisodes)}</div><div class="stat-label">episodios vistos</div></div>
+    <div class="stat-chip"><div class="stat-num teal">${fmt(watching)}</div><div class="stat-label">viendo ahora${watching ? ` · ${avgProgress}% avance prom.` : ''}</div></div>
+    <div class="stat-chip"><div class="stat-num green">${fmt(completed)}</div><div class="stat-label">completadas</div></div>
   `;
 
   // racha de días activo
