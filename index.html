@@ -1186,6 +1186,14 @@ async function tmdbGetTrending(){
 }
 
 // ---------------- series data helpers ----------------
+// TMDB a veces crea la ficha de una temporada anunciada mucho antes de que se estrene,
+// ya con su cantidad de episodios puesta. No la contamos todavía si su estreno es futuro,
+// para no mostrarla como "pendiente de ver" cuando en realidad no hay nada que ver aún.
+function seasonHasStarted(se){
+  if(!se.air_date) return true; // sin fecha conocida: no penalizamos, se asume disponible
+  return new Date(se.air_date + 'T00:00:00') <= new Date();
+}
+
 function extractMeta(details){
   return {
     poster: details.poster_path ? TMDB_IMG + details.poster_path : null,
@@ -1240,7 +1248,7 @@ function addSeriesFromTMDB(details){
   if(existing) return { series: existing, wasNew: false };
 
   const seasons = (details.seasons || [])
-    .filter(se => se.season_number > 0 && se.episode_count > 0)
+    .filter(se => se.season_number > 0 && se.episode_count > 0 && seasonHasStarted(se))
     .map(se => ({ number: se.season_number, watched: new Array(se.episode_count).fill(false) }));
   const meta = extractMeta(details);
   const s = { id: uid(), title: details.name, tmdbId: details.id, seasons, lastActivity: Date.now(), ...meta };
@@ -1269,7 +1277,7 @@ async function syncSeries(seriesId){
   const details = await tmdbGetShowDetails(s.tmdbId);
   if(!details) return;
   Object.assign(s, extractMeta(details));
-  (details.seasons || []).filter(se => se.season_number > 0 && se.episode_count > 0).forEach(se => {
+  (details.seasons || []).filter(se => se.season_number > 0 && se.episode_count > 0 && seasonHasStarted(se)).forEach(se => {
     const existing = s.seasons.find(x => x.number === se.season_number);
     if(existing){
       if(se.episode_count > existing.watched.length){
@@ -2221,7 +2229,7 @@ async function runImport(){
           if(existing){
             Object.assign(existing, extractMeta(details));
             existing.tmdbId = details.id;
-            (details.seasons || []).filter(se => se.season_number > 0 && se.episode_count > 0).forEach(se => {
+            (details.seasons || []).filter(se => se.season_number > 0 && se.episode_count > 0 && seasonHasStarted(se)).forEach(se => {
               if(!existing.seasons.find(x => x.number === se.season_number)){
                 existing.seasons.push({ number: se.season_number, watched: new Array(se.episode_count).fill(false) });
               }
@@ -2233,7 +2241,7 @@ async function runImport(){
             logLine(`  → ya la tenías cargada (${existing.title}), marqué ${matched} episodios.`);
           } else {
             const seasons = (details.seasons || [])
-              .filter(se => se.season_number > 0 && se.episode_count > 0)
+              .filter(se => se.season_number > 0 && se.episode_count > 0 && seasonHasStarted(se))
               .map(se => ({ number: se.season_number, watched: new Array(se.episode_count).fill(false) }));
             const meta = extractMeta(details);
             const newSeries = { id: uid(), title: details.name, tmdbId: details.id, seasons, ...meta };
