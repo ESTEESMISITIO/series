@@ -1364,6 +1364,7 @@ function toggleEpisode(seriesId, seasonNumber, epIndex){
   const s = seriesList.find(x => x.id === seriesId);
   const se = s.seasons.find(x => x.number === seasonNumber);
   const willWatch = !se.watched[epIndex];
+  const now = Date.now();
   let extraMarked = 0;
 
   if(willWatch){
@@ -1374,14 +1375,18 @@ function toggleEpisode(seriesId, seasonNumber, epIndex){
 
     if(priorUnwatchedCount > 0 && confirm(`Hay ${priorUnwatchedCount} capítulo${priorUnwatchedCount === 1 ? '' : 's'} anterior${priorUnwatchedCount === 1 ? '' : 'es'} sin marcar (contando temporadas anteriores). ¿Marcarlos también como vistos hasta este punto?`)){
       priorSeasons.forEach(x => {
-        x.watched.forEach((w, i) => { if(!w){ x.watched[i] = true; extraMarked++; } });
+        if(!x.touchedAt) x.touchedAt = [];
+        x.watched.forEach((w, i) => { if(!w){ x.watched[i] = true; x.touchedAt[i] = now; extraMarked++; } });
       });
-      for(let i = 0; i < epIndex; i++){ if(!se.watched[i]){ se.watched[i] = true; extraMarked++; } }
+      if(!se.touchedAt) se.touchedAt = [];
+      for(let i = 0; i < epIndex; i++){ if(!se.watched[i]){ se.watched[i] = true; se.touchedAt[i] = now; extraMarked++; } }
     }
   }
 
+  if(!se.touchedAt) se.touchedAt = [];
   se.watched[epIndex] = willWatch;
-  s.lastActivity = Date.now();
+  se.touchedAt[epIndex] = now;
+  s.lastActivity = now;
   if(willWatch) logActivity(s.id, 1 + extraMarked);
   saveData();
   render();
@@ -1724,12 +1729,14 @@ function toggleWholeSeason(seriesId, seasonNumber){
   const s = seriesList.find(x => x.id === seriesId);
   const se = s.seasons.find(x => x.number === seasonNumber);
   const allWatched = se.watched.every(Boolean);
+  const now = Date.now();
   if(!allWatched){
     const newlyWatched = se.watched.filter(w => !w).length;
     logActivity(s.id, newlyWatched);
   }
   se.watched = se.watched.map(() => !allWatched);
-  s.lastActivity = Date.now();
+  se.touchedAt = se.watched.map(() => now);
+  s.lastActivity = now;
   saveData();
   render();
 }
@@ -2626,16 +2633,52 @@ function seriesKey(s){
   return s.tmdbId ? ('tmdb:' + s.tmdbId) : ('title:' + normalizeTitle(s.title));
 }
 
+// A diferencia de mergeSeriesInto (que combina con "si cualquiera lo tiene visto, queda visto",
+// pensado solo para unir duplicados), esta función decide EPISODIO POR EPISODIO cuál de las dos
+// copias es más reciente (según cuándo se tocó ese capítulo puntual), para que desmarcar uno
+// se pueda propagar sin que otro capítulo tocado más reciente "arrastre" a toda la serie.
+function reconcileSeries(local, remote){
+  const result = { ...local, seasons: local.seasons.map(se => ({ ...se, watched: se.watched.slice(), touchedAt: (se.touchedAt || []).slice() })) };
+
+  remote.seasons.forEach(rse => {
+    let lse = result.seasons.find(se => se.number === rse.number);
+    if(!lse){
+      result.seasons.push({ number: rse.number, watched: rse.watched.slice(), touchedAt: (rse.touchedAt || []).slice() });
+      return;
+    }
+    const maxLen = Math.max(lse.watched.length, rse.watched.length);
+    const newWatched = [], newTouched = [];
+    for(let i = 0; i < maxLen; i++){
+      const lt = (lse.touchedAt || [])[i] || 0;
+      const rt = (rse.touchedAt || [])[i] || 0;
+      if(rt > lt){
+        newWatched[i] = !!rse.watched[i];
+        newTouched[i] = rt;
+      } else {
+        newWatched[i] = !!lse.watched[i];
+        newTouched[i] = lt;
+      }
+    }
+    lse.watched = newWatched;
+    lse.touchedAt = newTouched;
+  });
+
+  if((remote.lastActivity || 0) > (result.lastActivity || 0)) result.lastActivity = remote.lastActivity;
+  if((remote.importLastWatched || 0) > (result.importLastWatched || 0)) result.importLastWatched = remote.importLastWatched;
+  result.id = local.id;
+  return result;
+}
+
 function mergeSeriesLists(localList, cloudList){
   const map = new Map();
-  localList.forEach(s => map.set(seriesKey(s), { ...s, seasons: s.seasons.map(se => ({ ...se, watched: se.watched.slice() })) }));
+  localList.forEach(s => map.set(seriesKey(s), { ...s, seasons: s.seasons.map(se => ({ ...se, watched: se.watched.slice(), touchedAt: (se.touchedAt || []).slice() })) }));
   cloudList.forEach(cs => {
     const key = seriesKey(cs);
     const existing = map.get(key);
     if(!existing){
-      map.set(key, { ...cs, seasons: cs.seasons.map(se => ({ ...se, watched: se.watched.slice() })) });
+      map.set(key, { ...cs, seasons: cs.seasons.map(se => ({ ...se, watched: se.watched.slice(), touchedAt: (se.touchedAt || []).slice() })) });
     } else {
-      mergeSeriesInto(existing, cs);
+      map.set(key, reconcileSeries(existing, cs));
     }
   });
   return [...map.values()];
@@ -2840,12 +2883,12 @@ async function syncSharedSeries(){
   const sharedCloudList = Array.isArray(sharedRow.data) ? sharedRow.data : [];
   const before = JSON.stringify(seriesList);
 
-  // aplica lo que venga de la nube sobre tu lista real: si ya tenías esa serie (compartida o no),
-  // fusiona el progreso sin perder nada de lo tuyo; si no la tenías, te aparece nueva.
+  // aplica lo que venga de la nube sobre tu lista real: episodio por episodio gana quien lo
+  // tocó más reciente (así un capítulo desmarcado sí se propaga); si no tenías la serie, aparece nueva.
   sharedCloudList.forEach(shared => {
     const existingIdx = seriesList.findIndex(s => seriesKey(s) === seriesKey(shared));
     if(existingIdx >= 0){
-      mergeSeriesInto(seriesList[existingIdx], shared);
+      seriesList[existingIdx] = reconcileSeries(seriesList[existingIdx], shared);
       seriesList[existingIdx].shared = true;
     } else {
       seriesList.push({ ...shared, id: uid(), shared: true });
