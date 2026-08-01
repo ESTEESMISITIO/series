@@ -227,6 +227,11 @@
   .dash-next-countdown .t-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;color:#b9aecf;}
 
   .continue-card{position:relative;}
+  .shared-dot{
+    position:absolute;top:8px;right:8px;
+    width:12px;height:12px;border-radius:50%;
+    background:var(--gold);box-shadow:0 0 0 2px var(--bg);
+  }
 
   .dash-section-title{
     font-family:'JetBrains Mono',monospace;
@@ -3034,6 +3039,7 @@ function renderPosterCard(s){
 
   return `<div class="continue-card" onclick="goToSeries('${s.id}')">
     ${poster}
+    ${s.shared ? `<div class="shared-dot" title="Compartida"></div>` : ''}
     <div class="continue-body">
       <p class="continue-title">${escapeHtml(s.title)}</p>
       <span class="continue-next">${caption}</span>
