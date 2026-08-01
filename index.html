@@ -105,7 +105,7 @@
   .key-status.missing{color:var(--gold);}
 
   .btn{border:none;border-radius:10px;padding:12px 18px;font-family:inherit;font-weight:600;font-size:14px;cursor:pointer;transition:transform .1s, opacity .15s;}
-  .btn:active{transform:scale(.97);}
+  .btn:active{transform:scale(.97);filter:brightness(.9);}
   .btn-primary{background:var(--gold);color:#120A1F;}
   .btn-primary:hover{opacity:.92;}
   .btn-ghost{background:var(--bg-soft);color:var(--text);border:1px solid var(--line);}
@@ -292,18 +292,19 @@
     display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;
   }
   .category-tab{
-    font-family:'JetBrains Mono',monospace;font-size:12.5px;
-    padding:9px 14px;border-radius:20px;
-    background:var(--card);color:var(--muted);
-    border:1px solid var(--line);cursor:pointer;
+    font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;
+    padding:10px 16px;border-radius:20px;
+    background:var(--bg-soft);color:var(--muted);
+    border:none;cursor:pointer;
     display:flex;align-items:center;gap:7px;
+    transition:transform .1s, filter .1s;
   }
+  .category-tab:active{transform:scale(.96);filter:brightness(.9);}
   .category-tab .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
-  .category-tab.active{color:var(--text);border-color:var(--text);background:#ffffff33;}
-  .category-tab[data-cat="viendo"].active{color:var(--teal);border-color:var(--teal);background:#3A1B5A1a;}
-  .category-tab[data-cat="pendiente"].active{color:var(--gold);border-color:var(--gold);background:var(--gold-soft);}
-  .category-tab[data-cat="completada"].active{color:var(--green);border-color:var(--green);background:#4f8a5824;}
-  .category-tab[data-cat="abandonada"].active{color:var(--danger);border-color:var(--danger);background:#8F3A3A24;}
+  .category-tab[data-cat="viendo"].active{background:var(--gold);color:var(--text);}
+  .category-tab[data-cat="pendiente"].active{background:var(--teal);color:#fff;}
+  .category-tab[data-cat="completada"].active{background:var(--green);color:#fff;}
+  .category-tab[data-cat="abandonada"].active{background:var(--danger);color:#fff;}
   .cat-grid-wrap{display:grid;grid-template-columns:repeat(auto-fill, minmax(100px, 1fr));gap:10px;}
 
   /* ---- Mis Series tab ---- */
