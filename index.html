@@ -231,6 +231,16 @@
     border:3px solid var(--gold);
     box-sizing:border-box;
   }
+  .poster-status-badge{
+    position:absolute;top:6px;right:6px;
+    min-width:22px;height:22px;padding:0 5px;border-radius:11px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
+    box-shadow:0 1px 4px #00000055;
+  }
+  .poster-status-badge.count{background:var(--gold);color:var(--text);}
+  .poster-status-badge.done{background:var(--green);color:#fff;}
+  .poster-status-badge svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;}
 
   .dash-section-title{
     font-family:'JetBrains Mono',monospace;
@@ -278,17 +288,17 @@
   }
   .category-tab{
     font-family:'JetBrains Mono',monospace;font-size:12.5px;
-    padding:9px 14px;border-radius:20px;
-    background:var(--card);color:var(--muted);
-    border:1px solid var(--line);cursor:pointer;
+    padding:9px 16px;border-radius:20px;
+    background:var(--bg-soft);color:var(--muted);
+    border:none;cursor:pointer;
     display:flex;align-items:center;gap:7px;
   }
   .category-tab .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
-  .category-tab.active{color:var(--text);border-color:var(--text);background:#ffffff33;}
-  .category-tab[data-cat="viendo"].active{color:var(--teal);border-color:var(--teal);background:#3A1B5A1a;}
-  .category-tab[data-cat="pendiente"].active{color:var(--gold);border-color:var(--gold);background:var(--gold-soft);}
-  .category-tab[data-cat="completada"].active{color:var(--green);border-color:var(--green);background:#4f8a5824;}
-  .category-tab[data-cat="abandonada"].active{color:var(--danger);border-color:var(--danger);background:#8F3A3A24;}
+  .category-tab.active{color:#fff;background:var(--text);}
+  .category-tab[data-cat="viendo"].active{background:var(--teal);color:#fff;}
+  .category-tab[data-cat="pendiente"].active{background:var(--gold);color:var(--text);}
+  .category-tab[data-cat="completada"].active{background:var(--green);color:#fff;}
+  .category-tab[data-cat="abandonada"].active{background:var(--danger);color:#fff;}
   .cat-grid-wrap{display:grid;grid-template-columns:repeat(auto-fill, minmax(100px, 1fr));gap:10px;}
 
   /* ---- Mis Series tab ---- */
@@ -3096,8 +3106,19 @@ function renderPosterCard(s){
   else if(status === 'pendiente') caption = `${prog.total} capítulos`;
   else caption = '';
 
+  let statusBadge = '';
+  if(status === 'completada'){
+    statusBadge = `<div class="poster-status-badge done" title="Completa"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>`;
+  } else if(status === 'viendo'){
+    const remaining = prog.total - prog.watched;
+    if(remaining > 0) statusBadge = `<div class="poster-status-badge count" title="${remaining} episodio${remaining === 1 ? '' : 's'} sin ver">${remaining}</div>`;
+  }
+
   return `<div class="continue-card ${s.shared ? 'shared' : ''}" onclick="goToSeries('${s.id}')" title="${s.shared ? 'Serie compartida' : ''}">
-    ${poster}
+    <div style="position:relative;">
+      ${poster}
+      ${statusBadge}
+    </div>
     <div class="continue-body">
       <p class="continue-title">${escapeHtml(s.title)}</p>
       <span class="continue-next">${caption}</span>
