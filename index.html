@@ -827,7 +827,7 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
         <div class="profile-section-title">Créditos</div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
           <img src="tmdb-logo.svg" alt="TMDB" style="height:20px;" onerror="this.style.display='none'">
-          <p style="margin:0;font-size:12px;color:var(--muted);">Este producto usa la API de TMDB pero no está respaldado ni certificado por TMDB.</p>
+          <p style="margin:0;font-size:12px;color:var(--muted);">Este producto usa la <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">API de TMDB</a> pero no está respaldado ni certificado por TMDB.</p>
         </div>
         <p style="font-size:11px;">Disponibilidad de streaming cortesía de JustWatch.</p>
       </div>
@@ -851,16 +851,10 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
     <div id="continueContainer"></div>
 
     <div class="dash-section-title">
-      <span>Nuevas temporadas</span>
-      <button onclick="switchTab('series')">ver todas →</button>
+      <span>Próximos estrenos</span>
+      <button onclick="switchTab('calendar')">ver calendario →</button>
     </div>
-    <div id="newSeasonsContainer"></div>
-
-    <div class="dash-section-title">
-      <span>Populares esta semana</span>
-      <button onclick="switchTab('discover')">ver todas →</button>
-    </div>
-    <div id="dashTrendingContainer"></div>
+    <div id="dashUpcoming"></div>
   </section>
 
   <!-- ===== TAB: MIS SERIES ===== -->
@@ -955,7 +949,7 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
 
   <footer>
     tus series se guardan en tu cuenta y se sincronizan automáticamente en la nube<br>
-    <span style="opacity:.75;">Este producto usa la API de TMDB pero no está respaldado ni certificado por TMDB.</span>
+    <span style="opacity:.75;">Este producto usa la <a href="https://www.themoviedb.org/" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">API de TMDB</a> pero no está respaldado ni certificado por TMDB.</span>
   </footer>
 </div>
 
@@ -3109,6 +3103,19 @@ function renderDashboard(){
     </div>
   `;
 
+  // seguir viendo: solo las 5 últimas con actividad real en la plataforma
+  const enCurso = seriesList
+    .filter(s => computeStatus(s) === 'viendo' && s.lastActivity)
+    .sort((a, b) => (b.lastActivity || 0) - (a.lastActivity || 0))
+    .slice(0, 8);
+
+  const contCont = document.getElementById('continueContainer');
+  if(enCurso.length === 0){
+    contCont.innerHTML = `<div class="empty"><strong>No estás viendo nada ahora</strong>Marca algún episodio para que aparezca acá.</div>`;
+  } else {
+    contCont.innerHTML = `<div class="continue-row">` + enCurso.map(s => renderPosterCard(s)).join('') + `</div>`;
+  }
+
   // ---- Tarjeta 3: Tu próximo estreno ----
   const today = new Date(); today.setHours(0,0,0,0);
   const upcoming = seriesList
@@ -3147,65 +3154,24 @@ function renderDashboard(){
     `;
   }
 
-  // seguir viendo: solo las 5 últimas con actividad real en la plataforma
-  const enCurso = seriesList
-    .filter(s => computeStatus(s) === 'viendo' && s.lastActivity)
-    .sort((a, b) => (b.lastActivity || 0) - (a.lastActivity || 0))
-    .slice(0, 8);
-
-  const contCont = document.getElementById('continueContainer');
-  if(enCurso.length === 0){
-    contCont.innerHTML = `<div class="empty"><strong>No estás viendo nada ahora</strong>Marca algún episodio para que aparezca acá.</div>`;
+  // próximos estrenos: lista completa (los 5 más cercanos), separada de la tarjeta de arriba
+  const upBox = document.getElementById('dashUpcoming');
+  if(upcoming.length === 0){
+    upBox.innerHTML = `<div class="empty"><strong>Nada programado</strong>Ninguna de tus series tiene un episodio próximo a estrenarse.</div>`;
   } else {
-    contCont.innerHTML = `<div class="continue-row">` + enCurso.map(s => renderPosterCard(s)).join('') + `</div>`;
-  }
-
-  // nuevas temporadas: completadas donde ya sabemos que hay un episodio de una temporada que todavía no tienes
-  const newSeasons = seriesList.filter(s => {
-    if(computeStatus(s) !== 'completada' || !s.nextEpisode) return false;
-    const maxSeason = s.seasons.length ? Math.max(...s.seasons.map(se => se.number)) : 0;
-    return s.nextEpisode.season_number > maxSeason;
-  });
-  const newSeasonsBox = document.getElementById('newSeasonsContainer');
-  if(newSeasons.length === 0){
-    newSeasonsBox.innerHTML = `<div class="empty"><strong>Nada nuevo por ahora</strong>Cuando una serie que ya terminaste anuncie una temporada nueva, va a aparecer acá.</div>`;
-  } else {
-    newSeasonsBox.innerHTML = `<div class="continue-row">` + newSeasons.map(s => `
-      <div class="continue-card" onclick="syncSeries('${s.id}'); goToSeries('${s.id}')">
-        ${s.poster ? `<img class="continue-poster" src="${s.poster}" alt="">` : `<div class="continue-poster"></div>`}
-        <div class="continue-body">
-          <p class="continue-title">${escapeHtml(s.title)}</p>
-          <span class="continue-next" style="color:var(--green);">Nueva T${s.nextEpisode.season_number}</span>
+    upBox.innerHTML = upcoming.slice(0, 5).map(s => {
+      const ep = s.nextEpisode;
+      const poster = s.poster ? `<img class="cal-poster" src="${s.poster}" alt="">` : `<div class="cal-poster"></div>`;
+      return `<div class="cal-item" style="cursor:pointer;" onclick="goToSeries('${s.id}')">
+        ${poster}
+        <div class="cal-info">
+          <div class="cal-title">${escapeHtml(s.title)}</div>
+          <div class="cal-ep">T${ep.season_number} · Ep ${ep.episode_number}${ep.name ? ' — ' + escapeHtml(ep.name) : ''}</div>
         </div>
-      </div>`).join('') + `</div>`;
+        <div class="cal-date">${formatRelativeDate(ep.air_date)}</div>
+      </div>`;
+    }).join('');
   }
-
-  // populares esta semana (mismo feed de Descubrir, cacheado)
-  renderDashTrending();
-}
-
-async function renderDashTrending(){
-  const box = document.getElementById('dashTrendingContainer');
-  if(!apiKey){ box.innerHTML = ''; return; }
-  if(!discoverCache){
-    box.innerHTML = `<div class="empty">Cargando tendencias...</div>`;
-    const res = await tmdbGetTrending();
-    if(res.error || !res.results){ box.innerHTML = `<div class="empty">No se pudo cargar tendencias ahora.</div>`; return; }
-    discoverCache = res.results;
-  }
-  const items = discoverCache.slice(0, 10);
-  box.innerHTML = `<div class="continue-row">` + items.map(show => {
-    const already = seriesList.some(s => s.tmdbId === show.id);
-    const poster = show.poster_path ? TMDB_IMG + show.poster_path : '';
-    const year = (show.first_air_date || '').slice(0,4);
-    return `<div class="continue-card" onclick="${already ? '' : `openSeriesPreview(${show.id})`}">
-      ${poster ? `<img class="continue-poster" src="${poster}" alt="">` : `<div class="continue-poster"></div>`}
-      <div class="continue-body">
-        <p class="continue-title">${escapeHtml(show.name)}</p>
-        <span class="continue-next">${already ? 'ya la tienes' : escapeHtml(year)}</span>
-      </div>
-    </div>`;
-  }).join('') + `</div>`;
 }
 
 function goToSeries(seriesId){
