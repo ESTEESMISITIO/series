@@ -227,9 +227,14 @@
   .dash-next-countdown .t-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;color:#b9aecf;}
 
   .continue-card{position:relative;}
-  .continue-card.shared .poster-wrap{
-    box-shadow: inset 0 0 0 5px var(--teal);
+  .continue-card.shared .poster-wrap{ position:relative; }
+  .continue-card.shared .poster-wrap::after{
+    content:'';
+    position:absolute;
+    inset:0;
     border-radius:11px;
+    box-shadow: inset 0 0 0 5px var(--teal);
+    pointer-events:none;
   }
   .poster-status-badge{
     position:absolute;top:6px;right:6px;
