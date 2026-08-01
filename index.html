@@ -274,6 +274,22 @@
   }
   .continue-mini-fill{height:100%;background:var(--gold);border-radius:2px;}
   .cat-section{margin-bottom:8px;}
+  .category-tabs{
+    display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;
+  }
+  .category-tab{
+    font-family:'JetBrains Mono',monospace;font-size:12.5px;
+    padding:9px 14px;border-radius:20px;
+    background:var(--card);color:var(--muted);
+    border:1px solid var(--line);cursor:pointer;
+    display:flex;align-items:center;gap:7px;
+  }
+  .category-tab .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+  .category-tab.active{color:var(--text);border-color:var(--text);background:#ffffff33;}
+  .category-tab[data-cat="viendo"].active{color:var(--teal);border-color:var(--teal);background:#3A1B5A1a;}
+  .category-tab[data-cat="pendiente"].active{color:var(--gold);border-color:var(--gold);background:var(--gold-soft);}
+  .category-tab[data-cat="completada"].active{color:var(--green);border-color:var(--green);background:#4f8a5824;}
+  .category-tab[data-cat="abandonada"].active{color:var(--danger);border-color:var(--danger);background:#8F3A3A24;}
   .cat-grid-wrap{display:flex;flex-wrap:wrap;gap:12px;}
   .cat-grid-wrap .continue-card{flex:0 0 130px;}
 
@@ -900,6 +916,7 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
     </div>
 
     <div class="stats-bar" id="statsBar"></div>
+    <div class="category-tabs" id="categoryTabs"></div>
     <div id="seriesContainer"></div>
     </div>
     <div class="detail-view" id="detailView"></div>
@@ -994,6 +1011,7 @@ const APIKEY_KEY = 'tmdb_api_key';
 const BUILTIN_TMDB_KEY = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJlMDMxZDMwZDBjN2UwODA4YWE1OGE2ZDFmOGMxMTQ4YiIsIm5iZiI6MTc4MzgyNTYwNy4yNzUsInN1YiI6IjZhNTMwNGM3OTcyYjZlMGUzOWIxMjIzZiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.1cwZXwtGM-zsPLeGIZRaQlbD8YdQJ23ViTDRz5VHfs8';
 let seriesList = [];
 let activeSeasonBySeries = {};
+let currentCategory = 'viendo';
 let apiKey = localStorage.getItem(APIKEY_KEY) || (isPlaceholder(BUILTIN_TMDB_KEY) ? '' : BUILTIN_TMDB_KEY);
 let currentFilter = 'todas';
 let discoverCache = null;
@@ -1473,11 +1491,13 @@ function render(){
   const query = document.getElementById('searchInput').value.trim().toLowerCase();
 
   if(seriesList.length === 0){
+    document.getElementById('categoryTabs').innerHTML = '';
     container.innerHTML = `<div class="empty"><strong>Todavía no agregas ninguna serie</strong>Toca "+ Agregar serie" para empezar tu colección.</div>`;
     return;
   }
 
   if(query){
+    document.getElementById('categoryTabs').innerHTML = '';
     const filtered = seriesList.filter(s => s.title.toLowerCase().includes(query))
       .sort((a,b) => a.title.localeCompare(b.title));
     container.innerHTML = filtered.length
@@ -1486,44 +1506,44 @@ function render(){
     return;
   }
 
-  const now = Date.now();
-  const staleMs = STALE_DAYS * 24 * 60 * 60 * 1000;
-  const viendoAll = seriesList.filter(s => computeStatus(s) === 'viendo');
+  // agrupa por las 4 categorías; "sin capítulos cargados" (raro, series manuales recién creadas) entra en Pendientes
+  const groups = {
+    viendo: seriesList.filter(s => computeStatus(s) === 'viendo')
+      .sort((a, b) => effectiveActivity(b) - effectiveActivity(a)),
+    pendiente: seriesList.filter(s => ['pendiente', 'sindatos'].includes(computeStatus(s)))
+      .sort((a, b) => effectiveActivity(b) - effectiveActivity(a) || a.title.localeCompare(b.title)),
+    completada: seriesList.filter(s => computeStatus(s) === 'completada')
+      .sort((a, b) => effectiveActivity(b) - effectiveActivity(a) || a.title.localeCompare(b.title)),
+    abandonada: seriesList.filter(s => computeStatus(s) === 'abandonada')
+      .sort((a, b) => a.title.localeCompare(b.title))
+  };
 
-  const continuar = viendoAll
-    .filter(s => s.lastActivity && (now - s.lastActivity) <= staleMs)
-    .sort((a, b) => (b.lastActivity || 0) - (a.lastActivity || 0));
-
-  const sinVerTiempo = viendoAll
-    .filter(s => !(s.lastActivity && (now - s.lastActivity) <= staleMs))
-    .sort((a, b) => effectiveActivity(b) - effectiveActivity(a));
-
-  const sinVer = seriesList.filter(s => computeStatus(s) === 'pendiente')
-    .sort((a, b) => effectiveActivity(b) - effectiveActivity(a) || a.title.localeCompare(b.title));
-  const completadas = seriesList.filter(s => computeStatus(s) === 'completada')
-    .sort((a, b) => effectiveActivity(b) - effectiveActivity(a) || a.title.localeCompare(b.title));
-  const sinDatos = seriesList.filter(s => computeStatus(s) === 'sindatos').sort((a,b) => a.title.localeCompare(b.title));
-  const abandonadas = seriesList.filter(s => computeStatus(s) === 'abandonada').sort((a,b) => a.title.localeCompare(b.title));
-
-  const sections = [
-    { label: 'Ver a continuación', items: continuar },
-    { label: 'Sin ver por un tiempo', items: sinVerTiempo },
-    { label: 'Sin ver', items: sinVer },
-    { label: 'Completadas', items: completadas },
-    { label: 'Sin capítulos cargados', items: sinDatos },
-    { label: 'Abandonadas', items: abandonadas }
+  const tabsMeta = [
+    { key: 'viendo', label: 'Viendo' },
+    { key: 'pendiente', label: 'Pendientes' },
+    { key: 'completada', label: 'Completadas' },
+    { key: 'abandonada', label: 'Abandonadas' }
   ];
 
-  let html = '';
-  sections.forEach(({ label, items }) => {
-    if(items.length === 0) return;
-    html += `
-      <div class="cat-section">
-        <div class="dash-section-title"><span>${label} (${items.length})</span></div>
-        <div class="continue-row">${items.map(s => renderPosterCard(s)).join('')}</div>
-      </div>`;
-  });
-  container.innerHTML = html;
+  // si la categoría elegida quedó sin series (por ejemplo, ya no hay abandonadas), cae a la primera que sí tenga
+  if(!groups[currentCategory] || groups[currentCategory].length === 0){
+    const firstWithItems = tabsMeta.find(t => groups[t.key].length > 0);
+    currentCategory = firstWithItems ? firstWithItems.key : 'viendo';
+  }
+
+  document.getElementById('categoryTabs').innerHTML = tabsMeta.map(t => `
+    <button class="category-tab ${t.key === currentCategory ? 'active' : ''}" data-cat="${t.key}" onclick="setCategory('${t.key}')">
+      <span class="dot"></span>${t.label} (${groups[t.key].length})
+    </button>`).join('');
+
+  const items = groups[currentCategory];
+  container.innerHTML = items.length
+    ? `<div class="cat-grid-wrap">` + items.map(s => renderPosterCard(s)).join('') + `</div>`
+    : `<div class="empty"><strong>Nada por aquí todavía</strong>Cuando tengas series en esta categoría, van a aparecer acá.</div>`;
+}
+function setCategory(key){
+  currentCategory = key;
+  render();
 }
 
 function openDetail(seriesId){
