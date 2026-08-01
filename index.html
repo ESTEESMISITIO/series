@@ -3062,12 +3062,17 @@ setLoginMode('signin');
 
 (async function init(){
   const syncAvailable = initSupabaseClient();
+  const isRecovery = window.location.hash.includes('type=recovery');
+
   if(syncAvailable){
     const { data } = await supabaseClient.auth.getSession();
     currentSession = data.session || null;
   }
 
-  if(syncAvailable && !currentSession){
+  if(isRecovery){
+    showResetPasswordScreen();
+    window.history.replaceState(null, '', window.location.pathname);
+  } else if(syncAvailable && !currentSession){
     lockApp();
   } else {
     unlockApp();
