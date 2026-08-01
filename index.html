@@ -177,38 +177,65 @@
     font-family:'Bricolage Grotesque',serif;
     font-size:22px;font-weight:700;margin:0 0 16px;
   }
-  .streak-banner{
-    display:flex;align-items:center;gap:10px;
+
+  .header-streak-badge{
+    display:flex;align-items:center;gap:5px;
     background:var(--gold-soft);border:1px solid var(--gold);
-    border-radius:12px;padding:10px 14px;margin-bottom:16px;
+    border-radius:20px;padding:6px 11px;
+    font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gold);
+    white-space:nowrap;
   }
-  .streak-banner .flame{font-size:20px;line-height:1;}
-  .streak-banner strong{font-family:'Bricolage Grotesque',serif;font-size:15px;}
-  .streak-banner span.streak-sub{font-size:12px;color:var(--muted);}
+  .header-streak-badge .flame{font-size:14px;line-height:1;}
 
-  .watch-time-card{
+  .dash-cards-row{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+    gap:12px;
+    margin-bottom:8px;
+  }
+  .dash-card{
     background:var(--card);border:1px solid var(--line);border-radius:14px;
-    padding:16px;margin-bottom:16px;
+    padding:16px;
   }
-  .watch-time-label{
-    font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;
-    letter-spacing:.06em;color:var(--muted);margin-bottom:10px;
+  .dash-card-label{
+    display:flex;justify-content:space-between;align-items:center;
+    font-family:'JetBrains Mono',monospace;font-size:10.5px;text-transform:uppercase;
+    letter-spacing:.06em;color:var(--muted);margin-bottom:12px;
   }
-  .watch-time-row{display:flex;gap:18px;flex-wrap:wrap;}
-  .watch-time-unit{text-align:center;}
-  .watch-time-unit .num{font-family:'Bricolage Grotesque',serif;font-size:26px;font-weight:700;color:var(--teal);}
-  .watch-time-unit .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;color:var(--muted);}
+  .dash-card-label svg{width:15px;height:15px;stroke:var(--muted);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  .dash-card-big{font-family:'Bricolage Grotesque',serif;font-size:28px;font-weight:700;color:var(--gold);line-height:1;}
+  .dash-card-time-row{display:flex;gap:5px;align-items:baseline;margin-top:4px;flex-wrap:wrap;}
+  .dash-card-time-row .t-num{font-family:'Bricolage Grotesque',serif;font-weight:700;font-size:16px;}
+  .dash-card-time-row .t-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;margin-right:6px;}
+  .dash-card-sub{font-size:11px;color:var(--muted);margin-top:6px;}
+  .dash-card-progress-track{height:6px;background:var(--bg-soft);border-radius:4px;overflow:hidden;margin:10px 0 8px;}
+  .dash-card-progress-fill{height:100%;background:var(--teal);border-radius:4px;}
+  .dash-card-foot-row{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);}
+  .dash-card-foot-row strong{color:var(--text);}
 
-  .weekly-highlight-card{
-    display:flex;gap:14px;align-items:center;
-    background:var(--card);border:1px solid var(--line);border-radius:14px;
-    padding:14px;margin-bottom:16px;cursor:pointer;
+  .dash-card-dark{
+    background:#1c1428;color:#f3efe4;border:1px solid #2c2440;
+    position:relative;overflow:hidden;
   }
-  .weekly-highlight-card:hover{border-color:var(--gold);}
-  .weekly-highlight-poster{width:56px;height:84px;border-radius:8px;object-fit:cover;background:var(--bg-soft);flex-shrink:0;}
-  .weekly-highlight-label{font-family:'JetBrains Mono',monospace;font-size:10.5px;text-transform:uppercase;color:var(--muted);letter-spacing:.05em;margin-bottom:3px;}
-  .weekly-highlight-title{font-family:'Bricolage Grotesque',serif;font-size:16px;font-weight:700;margin:0;}
-  .weekly-highlight-sub{font-size:12.5px;color:var(--gold);margin-top:2px;}
+  .dash-card-dark .dash-card-label{color:#b9aecf;}
+  .dash-card-dark .dash-card-label svg{stroke:#b9aecf;}
+  .dash-next-row{display:flex;gap:12px;align-items:center;}
+  .dash-next-poster{width:44px;height:64px;border-radius:8px;object-fit:cover;background:#2c2440;flex-shrink:0;}
+  .dash-next-text{font-size:11px;color:#b9aecf;margin-bottom:6px;}
+  .dash-next-countdown{display:flex;gap:14px;}
+  .dash-next-countdown .t-num{font-family:'Bricolage Grotesque',serif;font-size:22px;font-weight:700;color:var(--gold);}
+  .dash-next-countdown .t-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;color:#b9aecf;}
+
+  .quick-mark-btn{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    display:flex;flex-direction:column;align-items:center;gap:4px;
+    background:#00000088;color:#fff;border:none;border-radius:10px;
+    padding:10px 8px;cursor:pointer;width:88%;
+  }
+  .quick-mark-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;background:var(--gold);border-radius:50%;padding:5px;box-sizing:content-box;}
+  .quick-mark-btn span{font-family:'JetBrains Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:.04em;text-align:center;line-height:1.3;}
+  .continue-card{position:relative;}
+
   .dash-section-title{
     font-family:'JetBrains Mono',monospace;
     font-size:11px;text-transform:uppercase;letter-spacing:.08em;
@@ -659,7 +686,10 @@
       <h1>Series Tracker</h1>
       <p class="sub" id="pageSub">Busca series reales, marca episodios y no pierdas nunca en cuál vas.</p>
     </div>
-    <button class="gear-btn" id="profileBtn" title="Perfil y configuración"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
+    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <div id="headerStreakBadge"></div>
+      <button class="gear-btn" id="profileBtn" title="Perfil y configuración"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
+    </div>
   </header>
 
   <div class="preview-overlay" id="previewOverlay">
@@ -815,10 +845,12 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
   <!-- ===== TAB: INICIO ===== -->
   <section class="tab-section active" id="tab-home">
     <p class="dash-greeting" id="dashGreeting"></p>
-    <div id="streakBanner"></div>
-    <div class="stats-bar" id="dashStats"></div>
-    <div id="watchTimeBlock"></div>
-    <div id="weeklyHighlight"></div>
+
+    <div class="dash-cards-row">
+      <div class="dash-card" id="cardResumen"></div>
+      <div class="dash-card" id="cardAvance"></div>
+      <div class="dash-card dash-card-dark" id="cardProximo"></div>
+    </div>
 
     <div class="dash-section-title">
       <span>Seguir viendo</span>
@@ -827,10 +859,16 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
     <div id="continueContainer"></div>
 
     <div class="dash-section-title">
-      <span>Próximos estrenos</span>
-      <button onclick="switchTab('calendar')">ver calendario →</button>
+      <span>Nuevas temporadas</span>
+      <button onclick="switchTab('series')">ver todas →</button>
     </div>
-    <div id="dashUpcoming"></div>
+    <div id="newSeasonsContainer"></div>
+
+    <div class="dash-section-title">
+      <span>Populares esta semana</span>
+      <button onclick="switchTab('discover')">ver todas →</button>
+    </div>
+    <div id="dashTrendingContainer"></div>
   </section>
 
   <!-- ===== TAB: MIS SERIES ===== -->
@@ -1425,6 +1463,7 @@ const STALE_DAYS = 21; // sin actividad por más de esto = "sin ver por un tiemp
 
 function render(){
   renderStats();
+  renderHeaderStreakBadge();
   if(document.getElementById('tab-home').classList.contains('active')) renderDashboard();
 
   if(openSeriesId){
@@ -2993,7 +3032,7 @@ function progressColor(status){
   return 'var(--gold)';
 }
 
-function renderPosterCard(s){
+function renderPosterCard(s, opts = {}){
   const next = findNext(s);
   const prog = computeProgress(s);
   const pct = prog.total ? Math.round((prog.watched / prog.total) * 100) : 0;
@@ -3007,8 +3046,15 @@ function renderPosterCard(s){
   else if(status === 'pendiente') caption = `${prog.total} capítulos`;
   else caption = '';
 
+  const quickMarkHtml = (opts.quickMark && next) ? `
+    <button class="quick-mark-btn" onclick="event.stopPropagation(); quickMarkNext('${s.id}')">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span>Marcar último visto</span>
+    </button>` : '';
+
   return `<div class="continue-card" onclick="goToSeries('${s.id}')">
     ${poster}
+    ${quickMarkHtml}
     <div class="continue-body">
       <p class="continue-title">${escapeHtml(s.title)}</p>
       <span class="continue-next">${caption}</span>
@@ -3016,11 +3062,27 @@ function renderPosterCard(s){
     </div>
   </div>`;
 }
+function quickMarkNext(seriesId){
+  const s = seriesList.find(x => x.id === seriesId);
+  const next = findNext(s);
+  if(!next) return;
+  toggleEpisode(seriesId, next.season, next.episode - 1);
+}
+
+function renderHeaderStreakBadge(){
+  const streak = computeStreak();
+  const box = document.getElementById('headerStreakBadge');
+  if(!box) return;
+  box.innerHTML = streak > 0
+    ? `<div class="header-streak-badge"><span class="flame">🔥</span>${streak} día${streak === 1 ? '' : 's'}</div>`
+    : '';
+}
 
 function renderDashboard(){
   const hour = new Date().getHours();
   const saludo = hour < 6 ? 'Buenas noches' : hour < 13 ? 'Buenos días' : hour < 20 ? 'Buenas tardes' : 'Buenas noches';
   document.getElementById('dashGreeting').textContent = myName ? `${saludo}, ${myName}` : saludo;
+  renderHeaderStreakBadge();
 
   // stats resumidas
   let watchedEpisodes = 0, watching = 0, completed = 0, totalMinutes = 0, progressSum = 0;
@@ -3033,89 +3095,137 @@ function renderDashboard(){
     if(st === 'completada') completed++;
   });
   const avgProgress = watching ? Math.round((progressSum / watching) * 100) : 0;
-
-  document.getElementById('dashStats').innerHTML = `
-    <div class="stat-chip"><div class="stat-num gold">${fmt(watchedEpisodes)}</div><div class="stat-label">episodios vistos</div></div>
-    <div class="stat-chip"><div class="stat-num teal">${fmt(watching)}</div><div class="stat-label">viendo ahora${watching ? ` · ${avgProgress}% avance prom.` : ''}</div></div>
-    <div class="stat-chip"><div class="stat-num green">${fmt(completed)}</div><div class="stat-label">completadas</div></div>
-  `;
-
-  // racha de días activo
-  const streak = computeStreak();
-  document.getElementById('streakBanner').innerHTML = streak > 0
-    ? `<div class="streak-banner"><span class="flame">🔥</span><div><strong>${streak} día${streak === 1 ? '' : 's'} seguido${streak === 1 ? '' : 's'}</strong><br><span class="streak-sub">marcando episodios en la app</span></div></div>`
-    : '';
-
-  // tiempo total viendo series, desglosado
   const wt = formatWatchTime(totalMinutes);
-  document.getElementById('watchTimeBlock').innerHTML = `
-    <div class="watch-time-card">
-      <div class="watch-time-label">Tiempo total viendo series</div>
-      <div class="watch-time-row">
-        <div class="watch-time-unit"><div class="num">${wt.months}</div><div class="lbl">meses</div></div>
-        <div class="watch-time-unit"><div class="num">${wt.days}</div><div class="lbl">días</div></div>
-        <div class="watch-time-unit"><div class="num">${wt.hours}</div><div class="lbl">horas</div></div>
-        <div class="watch-time-unit"><div class="num">${wt.minutes}</div><div class="lbl">minutos</div></div>
-      </div>
+
+  // ---- Tarjeta 1: Resumen total ----
+  document.getElementById('cardResumen').innerHTML = `
+    <div class="dash-card-label">
+      <span>Resumen total</span>
+      <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </div>
+    <div class="dash-card-big">${fmt(watchedEpisodes)}</div>
+    <div class="dash-card-sub" style="margin-top:-2px;margin-bottom:6px;">episodios vistos</div>
+    <div class="dash-card-sub" style="margin-bottom:2px;">Tiempo total:</div>
+    <div class="dash-card-time-row">
+      <span class="t-num">${wt.months}</span><span class="t-lbl">meses</span>
+      <span class="t-num">${wt.days}</span><span class="t-lbl">días</span>
+      <span class="t-num">${wt.hours}</span><span class="t-lbl">horas</span>
+      <span class="t-num">${wt.minutes}</span><span class="t-lbl">min</span>
     </div>
   `;
 
-  // serie destacada de la semana
-  const highlight = getWeeklyHighlight();
-  const hlBox = document.getElementById('weeklyHighlight');
-  if(highlight){
-    const poster = highlight.series.poster ? `<img class="weekly-highlight-poster" src="${highlight.series.poster}" alt="">` : `<div class="weekly-highlight-poster"></div>`;
-    hlBox.innerHTML = `
-      <div class="weekly-highlight-card" onclick="goToSeries('${highlight.series.id}')">
+  // ---- Tarjeta 2: Avance actual ----
+  document.getElementById('cardAvance').innerHTML = `
+    <div class="dash-card-label">
+      <span>Avance actual</span>
+      <svg viewBox="0 0 24 24"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+    </div>
+    <div class="dash-card-big" style="color:var(--teal);">${fmt(watching)}</div>
+    <div class="dash-card-sub" style="margin-top:-2px;">viendo ahora</div>
+    <div class="dash-card-progress-track"><div class="dash-card-progress-fill" style="width:${avgProgress}%"></div></div>
+    <div class="dash-card-foot-row">
+      <span><strong>${fmt(completed)}</strong> completadas</span>
+      <span><strong>${avgProgress}%</strong> avance prom.</span>
+    </div>
+  `;
+
+  // ---- Tarjeta 3: Tu próximo estreno ----
+  const today = new Date(); today.setHours(0,0,0,0);
+  const upcoming = seriesList
+    .filter(s => s.nextEpisode && s.nextEpisode.air_date && new Date(s.nextEpisode.air_date + 'T00:00:00') >= today)
+    .sort((a,b) => new Date(a.nextEpisode.air_date) - new Date(b.nextEpisode.air_date));
+  const cardProximo = document.getElementById('cardProximo');
+  if(upcoming.length === 0){
+    cardProximo.innerHTML = `
+      <div class="dash-card-label"><span>Tu próximo estreno</span>
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </div>
+      <p class="dash-card-sub" style="margin-top:20px;">Nada programado por ahora.</p>
+    `;
+  } else {
+    const s = upcoming[0];
+    const ep = s.nextEpisode;
+    const target = new Date(ep.air_date + 'T00:00:00');
+    const diffMs = target - new Date();
+    const diffDays = Math.max(0, Math.floor(diffMs / 86400000));
+    const diffHours = Math.max(0, Math.floor((diffMs % 86400000) / 3600000));
+    const poster = s.poster ? `<img class="dash-next-poster" src="${s.poster}" alt="">` : `<div class="dash-next-poster"></div>`;
+    cardProximo.innerHTML = `
+      <div class="dash-card-label"><span>Tu próximo estreno</span>
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </div>
+      <div class="dash-next-row" style="cursor:pointer;" onclick="goToSeries('${s.id}')">
         ${poster}
         <div>
-          <div class="weekly-highlight-label">Destacada de la semana</div>
-          <p class="weekly-highlight-title">${escapeHtml(highlight.series.title)}</p>
-          <p class="weekly-highlight-sub">${highlight.count} episodio${highlight.count === 1 ? '' : 's'} esta semana</p>
+          <div class="dash-next-text">${escapeHtml(s.title)} · T${ep.season_number}E${ep.episode_number}</div>
+          <div class="dash-next-countdown">
+            <div><div class="t-num">${diffDays === 0 ? '¡Hoy!' : diffDays}</div>${diffDays === 0 ? '' : '<div class="t-lbl">días</div>'}</div>
+            ${diffDays > 0 ? `<div><div class="t-num">${diffHours}</div><div class="t-lbl">horas</div></div>` : ''}
+          </div>
         </div>
       </div>
     `;
-  } else {
-    hlBox.innerHTML = '';
   }
 
   // seguir viendo: solo las 5 últimas con actividad real en la plataforma
   const enCurso = seriesList
     .filter(s => computeStatus(s) === 'viendo' && s.lastActivity)
     .sort((a, b) => (b.lastActivity || 0) - (a.lastActivity || 0))
-    .slice(0, 5);
+    .slice(0, 8);
 
   const contCont = document.getElementById('continueContainer');
   if(enCurso.length === 0){
     contCont.innerHTML = `<div class="empty"><strong>No estás viendo nada ahora</strong>Marca algún episodio para que aparezca acá.</div>`;
   } else {
-    contCont.innerHTML = `<div class="continue-row">` + enCurso.map(s => renderPosterCard(s)).join('') + `</div>`;
+    contCont.innerHTML = `<div class="continue-row">` + enCurso.map(s => renderPosterCard(s, { quickMark: true })).join('') + `</div>`;
   }
 
-  // próximos estrenos (los 3 más cercanos)
-  const today = new Date(); today.setHours(0,0,0,0);
-  const upcoming = seriesList
-    .filter(s => s.nextEpisode && s.nextEpisode.air_date && new Date(s.nextEpisode.air_date + 'T00:00:00') >= today)
-    .sort((a,b) => new Date(a.nextEpisode.air_date) - new Date(b.nextEpisode.air_date))
-    .slice(0, 3);
-
-  const upCont = document.getElementById('dashUpcoming');
-  if(upcoming.length === 0){
-    upCont.innerHTML = `<div class="empty"><strong>Nada programado</strong>Ninguna de tus series tiene un episodio próximo a estrenarse.</div>`;
+  // nuevas temporadas: completadas donde ya sabemos que hay un episodio de una temporada que todavía no tienes
+  const newSeasons = seriesList.filter(s => {
+    if(computeStatus(s) !== 'completada' || !s.nextEpisode) return false;
+    const maxSeason = s.seasons.length ? Math.max(...s.seasons.map(se => se.number)) : 0;
+    return s.nextEpisode.season_number > maxSeason;
+  });
+  const newSeasonsBox = document.getElementById('newSeasonsContainer');
+  if(newSeasons.length === 0){
+    newSeasonsBox.innerHTML = `<div class="empty"><strong>Nada nuevo por ahora</strong>Cuando una serie que ya terminaste anuncie una temporada nueva, va a aparecer acá.</div>`;
   } else {
-    upCont.innerHTML = upcoming.map(s => {
-      const ep = s.nextEpisode;
-      const poster = s.poster ? `<img class="cal-poster" src="${s.poster}" alt="">` : `<div class="cal-poster"></div>`;
-      return `<div class="cal-item">
-        ${poster}
-        <div class="cal-info">
-          <div class="cal-title">${escapeHtml(s.title)}</div>
-          <div class="cal-ep">T${ep.season_number} · Ep ${ep.episode_number}${ep.name ? ' — ' + escapeHtml(ep.name) : ''}</div>
+    newSeasonsBox.innerHTML = `<div class="continue-row">` + newSeasons.map(s => `
+      <div class="continue-card" onclick="syncSeries('${s.id}'); goToSeries('${s.id}')">
+        ${s.poster ? `<img class="continue-poster" src="${s.poster}" alt="">` : `<div class="continue-poster"></div>`}
+        <div class="continue-body">
+          <p class="continue-title">${escapeHtml(s.title)}</p>
+          <span class="continue-next" style="color:var(--green);">Nueva T${s.nextEpisode.season_number}</span>
         </div>
-        <div class="cal-date">${formatRelativeDate(ep.air_date)}</div>
-      </div>`;
-    }).join('');
+      </div>`).join('') + `</div>`;
   }
+
+  // populares esta semana (mismo feed de Descubrir, cacheado)
+  renderDashTrending();
+}
+
+async function renderDashTrending(){
+  const box = document.getElementById('dashTrendingContainer');
+  if(!apiKey){ box.innerHTML = ''; return; }
+  if(!discoverCache){
+    box.innerHTML = `<div class="empty">Cargando tendencias...</div>`;
+    const res = await tmdbGetTrending();
+    if(res.error || !res.results){ box.innerHTML = `<div class="empty">No se pudo cargar tendencias ahora.</div>`; return; }
+    discoverCache = res.results;
+  }
+  const items = discoverCache.slice(0, 10);
+  box.innerHTML = `<div class="continue-row">` + items.map(show => {
+    const already = seriesList.some(s => s.tmdbId === show.id);
+    const poster = show.poster_path ? TMDB_IMG + show.poster_path : '';
+    const year = (show.first_air_date || '').slice(0,4);
+    return `<div class="continue-card" onclick="${already ? '' : `openSeriesPreview(${show.id})`}">
+      ${poster ? `<img class="continue-poster" src="${poster}" alt="">` : `<div class="continue-poster"></div>`}
+      <div class="continue-body">
+        <p class="continue-title">${escapeHtml(show.name)}</p>
+        <span class="continue-next">${already ? 'ya la tienes' : escapeHtml(year)}</span>
+      </div>
+    </div>`;
+  }).join('') + `</div>`;
 }
 
 function goToSeries(seriesId){
