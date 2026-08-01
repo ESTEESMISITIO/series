@@ -29,6 +29,7 @@
     --muted:#6B5A78;
     --danger:#8F3A3A;
     --progress-green:#4f8a58;
+    --share-purple:#8B5CF6;
     --nav-h:64px;
   }
   *{box-sizing:border-box;}
@@ -228,7 +229,7 @@
 
   .continue-card{position:relative;}
   .continue-card.shared .continue-poster{
-    box-shadow: inset 0 0 0 3px var(--gold);
+    box-shadow: inset 0 0 0 5px var(--share-purple);
   }
 
   .dash-section-title{
@@ -257,6 +258,16 @@
   }
   .continue-card:hover{border-color:var(--gold);}
   .continue-poster{width:100%;aspect-ratio:2/3;object-fit:cover;background:var(--bg-soft);display:block;border-radius:11px;}
+  .poster-status-badge{
+    position:absolute;top:6px;right:6px;
+    min-width:24px;height:24px;padding:0 6px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;
+    box-shadow:0 1px 5px #00000066;
+  }
+  .poster-status-badge.count{background:var(--gold);color:var(--text);}
+  .poster-status-badge.done{background:var(--progress-green);color:#fff;}
+  .poster-status-badge svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;}
   .continue-body{padding:8px 10px 10px;}
   .continue-title{
     font-size:12.5px;font-weight:600;margin:0 0 3px;
@@ -3095,11 +3106,26 @@ function renderPosterCard(s){
   else if(status === 'pendiente') caption = `${prog.total} capítulos`;
   else caption = '';
 
+  const captionHtml = status === 'completada'
+    ? `<span class="continue-next" style="background:var(--progress-green);color:#fff;padding:2px 8px;border-radius:10px;display:inline-block;">${caption}</span>`
+    : `<span class="continue-next" style="color:${progressColor(status)}">${caption}</span>`;
+
+  let statusBadge = '';
+  if(status === 'completada'){
+    statusBadge = `<div class="poster-status-badge done" title="Completa"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>`;
+  } else if(status === 'viendo'){
+    const remaining = prog.total - prog.watched;
+    if(remaining > 0) statusBadge = `<div class="poster-status-badge count" title="${remaining} episodio${remaining === 1 ? '' : 's'} sin ver">${remaining}</div>`;
+  }
+
   return `<div class="continue-card ${s.shared ? 'shared' : ''}" onclick="goToSeries('${s.id}')" title="${s.shared ? 'Serie compartida' : ''}">
-    ${poster}
+    <div style="position:relative;">
+      ${poster}
+      ${statusBadge}
+    </div>
     <div class="continue-body">
       <p class="continue-title">${escapeHtml(s.title)}</p>
-      <span class="continue-next" style="color:${progressColor(status)}">${caption}</span>
+      ${captionHtml}
       ${prog.total ? `<div class="continue-mini-track"><div class="continue-mini-fill" style="width:${pct}%;background:${progressColor(status)}"></div></div>` : ''}
     </div>
   </div>`;
