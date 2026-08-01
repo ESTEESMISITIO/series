@@ -1330,6 +1330,7 @@ function removeSeason(seriesId, seasonNumber){
   }
   saveData();
   render();
+  if(s.shared) pushSharedNow(); // si no, la próxima sincronización la trae de vuelta desde la nube
 }
 // ---------------- Registro de actividad (para racha, destacada de la semana, gráfico) ----------------
 const ACTIVITY_LOG_KEY = 'activity-log';
