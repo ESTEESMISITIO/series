@@ -945,6 +945,12 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
 </nav>
 
 <script>
+// Guardamos esto ANTES que nada más se ejecute: la librería de Supabase borra sola
+// el pedazo de la URL con el token apenas la procesa, así que si no lo capturamos ya,
+// lo perdemos antes de poder revisar si era un link de "olvidé mi contraseña".
+const __initialHash = window.location.hash;
+const __initialSearch = window.location.search;
+
 const DATA_KEY = 'series-tracker-data';
 const APIKEY_KEY = 'tmdb_api_key';
 // Pega acá tu TMDB API key (v3, la corta) para que no haya que configurarla en cada dispositivo.
@@ -3062,7 +3068,7 @@ setLoginMode('signin');
 
 (async function init(){
   const syncAvailable = initSupabaseClient();
-  const isRecovery = window.location.hash.includes('type=recovery');
+  const isRecovery = __initialHash.includes('type=recovery') || __initialSearch.includes('type=recovery');
 
   if(syncAvailable){
     const { data } = await supabaseClient.auth.getSession();
