@@ -636,10 +636,18 @@
     <img class="login-logo" src="icons/icon-192.png" alt="">
     <h2>Series Tracker</h2>
     <p class="login-sub" id="loginSub">Inicia sesión para sincronizar tus series en todos tus dispositivos.</p>
-    <input id="loginEmail" type="email" placeholder="tu@email.com" autocomplete="username">
-    <input id="loginPassword" type="password" placeholder="Contraseña" autocomplete="current-password">
-    <button class="btn btn-primary" id="loginSubmitBtn">Iniciar sesión</button>
-    <button class="login-toggle" id="loginModeToggle">¿No tienes cuenta? Crear una</button>
+    <div id="loginNormalFields">
+      <input id="loginEmail" type="email" placeholder="tu@email.com" autocomplete="username">
+      <input id="loginPassword" type="password" placeholder="Contraseña" autocomplete="current-password">
+      <button class="btn btn-primary" id="loginSubmitBtn">Iniciar sesión</button>
+      <button class="login-toggle" id="loginModeToggle">¿No tienes cuenta? Crear una</button>
+      <button class="login-toggle" id="forgotPasswordBtn" style="margin-top:4px;">¿Olvidaste tu contraseña?</button>
+    </div>
+    <div id="resetPasswordSection" style="display:none;">
+      <p class="login-sub" style="margin-bottom:14px;">Escribe tu nueva contraseña.</p>
+      <input id="newPasswordInput" type="password" placeholder="Nueva contraseña" autocomplete="new-password">
+      <button class="btn btn-primary" id="saveNewPasswordBtn">Guardar nueva contraseña</button>
+    </div>
     <div class="login-error" id="loginError"></div>
   </div>
 </div>
@@ -2461,6 +2469,9 @@ function setSyncStatus(msg, ok){
 function initSupabaseClient(){
   if(supaUrl && supaAnon && window.supabase){
     supabaseClient = window.supabase.createClient(supaUrl, supaAnon);
+    supabaseClient.auth.onAuthStateChange((event) => {
+      if(event === 'PASSWORD_RECOVERY') showResetPasswordScreen();
+    });
     return true;
   }
   return false;
@@ -2921,6 +2932,58 @@ document.getElementById('loginSubmitBtn').addEventListener('click', async () => 
 });
 document.getElementById('loginPassword').addEventListener('keydown', e => {
   if(e.key === 'Enter') document.getElementById('loginSubmitBtn').click();
+});
+
+// ---------------- Olvidé mi contraseña ----------------
+document.getElementById('forgotPasswordBtn').addEventListener('click', async () => {
+  const errEl = document.getElementById('loginError');
+  const email = document.getElementById('loginEmail').value.trim() || prompt('Escribe el correo de tu cuenta:');
+  if(!email){ return; }
+  if(!supabaseClient){ errEl.style.color = ''; errEl.textContent = 'La sincronización no está configurada en esta app.'; return; }
+
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + window.location.pathname
+  });
+  if(error){
+    errEl.style.color = '';
+    errEl.textContent = error.message;
+  } else {
+    errEl.style.color = 'var(--teal)';
+    errEl.textContent = 'Te enviamos un correo con un link para elegir una contraseña nueva. Revisa spam si no lo ves en unos minutos.';
+  }
+});
+
+// cuando alguien vuelve desde el link del correo de recuperación, mostramos este formulario
+function showResetPasswordScreen(){
+  lockApp();
+  document.getElementById('loginNormalFields').style.display = 'none';
+  document.getElementById('resetPasswordSection').style.display = 'block';
+  document.getElementById('loginError').textContent = '';
+}
+document.getElementById('saveNewPasswordBtn').addEventListener('click', async () => {
+  const newPass = document.getElementById('newPasswordInput').value;
+  const errEl = document.getElementById('loginError');
+  if(!newPass || newPass.length < 6){
+    errEl.style.color = '';
+    errEl.textContent = 'La contraseña tiene que tener al menos 6 caracteres.';
+    return;
+  }
+  const { error } = await supabaseClient.auth.updateUser({ password: newPass });
+  if(error){
+    errEl.style.color = '';
+    errEl.textContent = error.message;
+    return;
+  }
+  errEl.style.color = 'var(--teal)';
+  errEl.textContent = 'Contraseña actualizada ✓ Iniciando sesión...';
+  document.getElementById('resetPasswordSection').style.display = 'none';
+  document.getElementById('loginNormalFields').style.display = 'block';
+  const { data } = await supabaseClient.auth.getSession();
+  currentSession = data.session;
+  unlockApp();
+  refreshSyncUI();
+  await handlePostLoginSync();
+  renderDashboard();
 });
 
 // ---------------- Dashboard (Inicio) ----------------
