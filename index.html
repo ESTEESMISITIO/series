@@ -227,8 +227,9 @@
   .dash-next-countdown .t-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;color:#b9aecf;}
 
   .continue-card{position:relative;}
-  .continue-card.shared .continue-poster{
+  .continue-card.shared .poster-wrap{
     box-shadow: inset 0 0 0 5px var(--teal);
+    border-radius:11px;
   }
   .poster-status-badge{
     position:absolute;top:6px;right:6px;
@@ -3114,7 +3115,7 @@ function renderPosterCard(s){
   }
 
   return `<div class="continue-card ${s.shared ? 'shared' : ''}" onclick="goToSeries('${s.id}')" title="${s.shared ? 'Serie compartida' : ''}">
-    <div style="position:relative;">
+    <div class="poster-wrap" style="position:relative;overflow:hidden;border-radius:11px;">
       ${poster}
       ${statusBadge}
     </div>
