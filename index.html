@@ -227,10 +227,9 @@
   .dash-next-countdown .t-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;color:#b9aecf;}
 
   .continue-card{position:relative;}
-  .shared-dot{
-    position:absolute;top:8px;right:8px;
-    width:12px;height:12px;border-radius:50%;
-    background:var(--gold);box-shadow:0 0 0 2px var(--bg);
+  .continue-card.shared .continue-poster{
+    border:3px solid var(--gold);
+    box-sizing:border-box;
   }
 
   .dash-section-title{
@@ -290,8 +289,7 @@
   .category-tab[data-cat="pendiente"].active{color:var(--gold);border-color:var(--gold);background:var(--gold-soft);}
   .category-tab[data-cat="completada"].active{color:var(--green);border-color:var(--green);background:#4f8a5824;}
   .category-tab[data-cat="abandonada"].active{color:var(--danger);border-color:var(--danger);background:#8F3A3A24;}
-  .cat-grid-wrap{display:flex;flex-wrap:wrap;gap:12px;}
-  .cat-grid-wrap .continue-card{flex:0 0 130px;}
+  .cat-grid-wrap{display:grid;grid-template-columns:repeat(auto-fill, minmax(100px, 1fr));gap:10px;}
 
   /* ---- Mis Series tab ---- */
   .toolbar{display:flex;gap:10px;margin:8px 0 14px;flex-wrap:wrap;}
@@ -915,7 +913,6 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
       </div>
     </div>
 
-    <div class="stats-bar" id="statsBar"></div>
     <div class="category-tabs" id="categoryTabs"></div>
     <div id="seriesContainer"></div>
     </div>
@@ -1476,7 +1473,6 @@ let openSeriesId = null;
 const STALE_DAYS = 21; // sin actividad por más de esto = "sin ver por un tiempo"
 
 function render(){
-  renderStats();
   renderHeaderStreakBadge();
   if(document.getElementById('tab-home').classList.contains('active')) renderDashboard();
 
@@ -3100,9 +3096,8 @@ function renderPosterCard(s){
   else if(status === 'pendiente') caption = `${prog.total} capítulos`;
   else caption = '';
 
-  return `<div class="continue-card" onclick="goToSeries('${s.id}')">
+  return `<div class="continue-card ${s.shared ? 'shared' : ''}" onclick="goToSeries('${s.id}')" title="${s.shared ? 'Serie compartida' : ''}">
     ${poster}
-    ${s.shared ? `<div class="shared-dot" title="Compartida"></div>` : ''}
     <div class="continue-body">
       <p class="continue-title">${escapeHtml(s.title)}</p>
       <span class="continue-next">${caption}</span>
