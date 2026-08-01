@@ -3099,7 +3099,7 @@ function renderPosterCard(s){
     ${poster}
     <div class="continue-body">
       <p class="continue-title">${escapeHtml(s.title)}</p>
-      <span class="continue-next">${caption}</span>
+      <span class="continue-next" style="color:${progressColor(status)}">${caption}</span>
       ${prog.total ? `<div class="continue-mini-track"><div class="continue-mini-fill" style="width:${pct}%;background:${progressColor(status)}"></div></div>` : ''}
     </div>
   </div>`;
