@@ -227,25 +227,24 @@
   .dash-next-countdown .t-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;color:#b9aecf;}
 
   .continue-card{position:relative;}
-  .continue-card.shared .poster-wrap{ position:relative; }
-  .continue-card.shared .poster-wrap::after{
-    content:'';
-    position:absolute;
-    inset:0;
-    border-radius:11px;
-    box-shadow: inset 0 0 0 5px #B23A7A;
-    pointer-events:none;
+  .shared-badge{
+    position:absolute;top:6px;left:6px;
+    width:18px;height:18px;border-radius:50%;
+    background:#B23A7A;color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;
+    box-shadow:0 1px 5px #00000066;
   }
   .poster-status-badge{
     position:absolute;top:6px;right:6px;
-    min-width:24px;height:24px;padding:0 6px;border-radius:12px;
+    min-width:19px;height:19px;padding:0 5px;border-radius:10px;
     display:flex;align-items:center;justify-content:center;
-    font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;
+    font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;
     box-shadow:0 1px 5px #00000066;
   }
   .poster-status-badge.count{background:var(--gold);color:var(--text);}
   .poster-status-badge.done{background:var(--green);color:#fff;}
-  .poster-status-badge svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;}
+  .poster-status-badge svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;}
 
   .dash-section-title{
     font-family:'JetBrains Mono',monospace;
@@ -1285,6 +1284,7 @@ async function syncSeries(seriesId){
       }
     } else {
       s.seasons.push({ number: se.season_number, watched: new Array(se.episode_count).fill(false) });
+      if(s.deletedSeasons) delete s.deletedSeasons[se.season_number];
     }
   });
   // limpiar cache de episodios de esta serie para que se recarguen nombres/fechas
@@ -1325,6 +1325,8 @@ function removeSeason(seriesId, seasonNumber){
   if(!confirm('¿Eliminar esta temporada?')) return;
   const s = seriesList.find(x => x.id === seriesId);
   s.seasons = s.seasons.filter(se => se.number !== seasonNumber);
+  if(!s.deletedSeasons) s.deletedSeasons = {};
+  s.deletedSeasons[seasonNumber] = Date.now(); // "recordatorio" para que la sincronización no la resucite
   if(activeSeasonBySeries[seriesId] === seasonNumber){
     activeSeasonBySeries[seriesId] = s.seasons.length ? s.seasons[0].number : null;
   }
@@ -2680,10 +2682,14 @@ function seriesKey(s){
 // se pueda propagar sin que otro capítulo tocado más reciente "arrastre" a toda la serie.
 function reconcileSeries(local, remote){
   const result = { ...local, seasons: local.seasons.map(se => ({ ...se, watched: se.watched.slice(), touchedAt: (se.touchedAt || []).slice() })) };
+  const deletedSeasons = local.deletedSeasons || {};
 
   remote.seasons.forEach(rse => {
     let lse = result.seasons.find(se => se.number === rse.number);
     if(!lse){
+      const tombstone = deletedSeasons[rse.number] || 0;
+      const remoteTouch = Math.max(rse.lastActivity || 0, ...(rse.touchedAt || [0]));
+      if(tombstone && tombstone >= remoteTouch) return; // se borró a propósito y nadie la tocó después: no se resucita
       result.seasons.push({ number: rse.number, watched: rse.watched.slice(), touchedAt: (rse.touchedAt || []).slice() });
       return;
     }
@@ -2706,6 +2712,7 @@ function reconcileSeries(local, remote){
 
   if((remote.lastActivity || 0) > (result.lastActivity || 0)) result.lastActivity = remote.lastActivity;
   if((remote.importLastWatched || 0) > (result.importLastWatched || 0)) result.importLastWatched = remote.importLastWatched;
+  result.deletedSeasons = { ...(remote.deletedSeasons || {}), ...deletedSeasons };
   result.id = local.id;
   return result;
 }
@@ -3129,10 +3136,11 @@ function renderPosterCard(s){
     if(remaining > 0) statusBadge = `<div class="poster-status-badge count" title="${remaining} episodio${remaining === 1 ? '' : 's'} sin ver">${remaining}</div>`;
   }
 
-  return `<div class="continue-card ${s.shared ? 'shared' : ''}" onclick="goToSeries('${s.id}')" title="${s.shared ? 'Serie compartida' : ''}">
+  return `<div class="continue-card" onclick="goToSeries('${s.id}')" title="${s.shared ? 'Serie compartida' : ''}">
     <div class="poster-wrap" style="position:relative;overflow:hidden;border-radius:11px;">
       ${poster}
       ${statusBadge}
+      ${s.shared ? `<div class="shared-badge" title="Compartida">C</div>` : ''}
     </div>
     <div class="continue-body">
       <p class="continue-title">${escapeHtml(s.title)}</p>
