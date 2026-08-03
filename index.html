@@ -1402,6 +1402,16 @@ function formatWatchTime(totalMinutes){
   return { months, days, hours, minutes: mins };
 }
 
+// Si se marcan varios episodios de una sola vez, puede ser que los estés viendo recién ahora
+// (una maratón real) o que sea un registro retroactivo (ya los habías visto hace tiempo).
+// Solo preguntamos cuando el lote es grande — marcar 1 o 2 de más no amerita interrumpir.
+const RETROACTIVE_THRESHOLD = 3;
+function shouldSkipActivityLog(count){
+  if(count < RETROACTIVE_THRESHOLD) return false;
+  const watchingNow = confirm(`Vas a marcar ${count} episodios de una vez.\n\nToca "Aceptar" si los estás viendo recién ahora.\nToca "Cancelar" si en realidad ya los habías visto hace tiempo (así no se ensucia tu racha ni el gráfico de actividad de hoy).`);
+  return !watchingNow;
+}
+
 function toggleEpisode(seriesId, seasonNumber, epIndex){
   const s = seriesList.find(x => x.id === seriesId);
   const se = s.seasons.find(x => x.number === seasonNumber);
@@ -1429,7 +1439,7 @@ function toggleEpisode(seriesId, seasonNumber, epIndex){
   se.watched[epIndex] = willWatch;
   se.touchedAt[epIndex] = now;
   s.lastActivity = now;
-  if(willWatch) logActivity(s.id, 1 + extraMarked);
+  if(willWatch && !shouldSkipActivityLog(1 + extraMarked)) logActivity(s.id, 1 + extraMarked);
   saveData();
   render();
 }
@@ -1775,7 +1785,7 @@ function toggleWholeSeason(seriesId, seasonNumber){
   const now = Date.now();
   if(!allWatched){
     const newlyWatched = se.watched.filter(w => !w).length;
-    logActivity(s.id, newlyWatched);
+    if(!shouldSkipActivityLog(newlyWatched)) logActivity(s.id, newlyWatched);
   }
   se.watched = se.watched.map(() => !allWatched);
   se.touchedAt = se.watched.map(() => now);
