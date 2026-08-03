@@ -1341,9 +1341,9 @@ try{ activityLog = JSON.parse(localStorage.getItem(ACTIVITY_LOG_KEY) || '[]'); }
 
 function dayString(ts){ return new Date(ts).toISOString().slice(0, 10); }
 
-function logActivity(seriesId, count = 1){
+function logActivity(seriesId, count = 1, ts = Date.now()){
   if(count <= 0) return;
-  activityLog.push({ ts: Date.now(), seriesId, count });
+  activityLog.push({ ts, seriesId, count });
   // poda: nos quedamos con los últimos 120 días para no crecer sin límite
   const cutoff = Date.now() - 120 * 24 * 60 * 60 * 1000;
   activityLog = activityLog.filter(e => e.ts >= cutoff);
@@ -2690,7 +2690,7 @@ function seriesKey(s){
 // pensado solo para unir duplicados), esta función decide EPISODIO POR EPISODIO cuál de las dos
 // copias es más reciente (según cuándo se tocó ese capítulo puntual), para que desmarcar uno
 // se pueda propagar sin que otro capítulo tocado más reciente "arrastre" a toda la serie.
-function reconcileSeries(local, remote){
+function reconcileSeries(local, remote, creditLog){
   const result = { ...local, seasons: local.seasons.map(se => ({ ...se, watched: se.watched.slice(), touchedAt: (se.touchedAt || []).slice() })) };
   const deletedSeasons = local.deletedSeasons || {};
 
@@ -2701,6 +2701,9 @@ function reconcileSeries(local, remote){
       const remoteTouch = Math.max(rse.lastActivity || 0, ...(rse.touchedAt || [0]));
       if(tombstone && tombstone >= remoteTouch) return; // se borró a propósito y nadie la tocó después: no se resucita
       result.seasons.push({ number: rse.number, watched: rse.watched.slice(), touchedAt: (rse.touchedAt || []).slice() });
+      if(creditLog){
+        rse.watched.forEach((w, i) => { if(w) creditLog.push({ ts: (rse.touchedAt || [])[i] || Date.now(), seriesId: local.id }); });
+      }
       return;
     }
     const maxLen = Math.max(lse.watched.length, rse.watched.length);
@@ -2708,9 +2711,11 @@ function reconcileSeries(local, remote){
     for(let i = 0; i < maxLen; i++){
       const lt = (lse.touchedAt || [])[i] || 0;
       const rt = (rse.touchedAt || [])[i] || 0;
+      const wasWatchedLocally = !!lse.watched[i];
       if(rt > lt){
         newWatched[i] = !!rse.watched[i];
         newTouched[i] = rt;
+        if(creditLog && newWatched[i] && !wasWatchedLocally) creditLog.push({ ts: rt, seriesId: local.id }); // lo marcó tu pareja, no vos
       } else {
         newWatched[i] = !!lse.watched[i];
         newTouched[i] = lt;
@@ -2940,18 +2945,27 @@ async function syncSharedSeries(){
 
   const sharedCloudList = Array.isArray(sharedRow.data) ? sharedRow.data : [];
   const before = JSON.stringify(seriesList);
+  const creditLog = []; // timestamps de episodios marcados gracias a tu pareja, para anotar en tu propia actividad
 
   // aplica lo que venga de la nube sobre tu lista real: episodio por episodio gana quien lo
   // tocó más reciente (así un capítulo desmarcado sí se propaga); si no tenías la serie, aparece nueva.
   sharedCloudList.forEach(shared => {
     const existingIdx = seriesList.findIndex(s => seriesKey(s) === seriesKey(shared));
     if(existingIdx >= 0){
-      seriesList[existingIdx] = reconcileSeries(seriesList[existingIdx], shared);
+      const localId = seriesList[existingIdx].id;
+      seriesList[existingIdx] = reconcileSeries(seriesList[existingIdx], shared, creditLog);
+      seriesList[existingIdx].id = localId;
       seriesList[existingIdx].shared = true;
     } else {
-      seriesList.push({ ...shared, id: uid(), shared: true });
+      const newId = uid();
+      seriesList.push({ ...shared, id: newId, shared: true });
+      shared.seasons.forEach(se => {
+        se.watched.forEach((w, i) => { if(w) creditLog.push({ ts: (se.touchedAt || [])[i] || shared.lastActivity || Date.now(), seriesId: newId }); });
+      });
     }
   });
+
+  if(creditLog.length) creditLog.forEach(({ ts, seriesId }) => logActivity(seriesId, 1, ts));
 
   // el estado que se comparte de vuelta es TODO lo que en tu lista quedó marcado como compartido,
   // ya con la fusión recién aplicada — así tu pareja recibe tu progreso real en la misma pasada.
