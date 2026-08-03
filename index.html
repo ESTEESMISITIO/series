@@ -300,6 +300,7 @@
   }
   .category-tab:active{transform:scale(.96);filter:brightness(.9);}
   .category-tab .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+  .category-tab.active{background:var(--teal);color:#fff;}
   .category-tab[data-cat="viendo"].active{background:var(--gold);color:var(--text);}
   .category-tab[data-cat="pendiente"].active{background:var(--teal);color:#fff;}
   .category-tab[data-cat="completada"].active{background:var(--green);color:#fff;}
@@ -937,8 +938,12 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
   <!-- ===== TAB: CALENDARIO ===== -->
   <section class="tab-section" id="tab-calendar">
     <div class="cal-toolbar">
-      <span class="sub">Próximos estrenos de tus series</span>
+      <span class="sub" id="calSub">Próximos estrenos de tus series</span>
       <button class="btn btn-ghost btn-sm" id="refreshCalBtn"><svg class="inline-icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>Actualizar</button>
+    </div>
+    <div class="category-tabs" style="margin-bottom:16px;">
+      <button class="category-tab active" id="calModeUpcoming" onclick="setCalMode('upcoming')"><span class="dot"></span>Próximos</button>
+      <button class="category-tab" id="calModeHistory" onclick="setCalMode('history')"><span class="dot"></span>Historial</button>
     </div>
     <div id="calendarContainer"></div>
   </section>
@@ -1088,7 +1093,7 @@ function switchTab(name){
   document.getElementById('pageSub').textContent = PAGE_SUBS[name];
   window.scrollTo({ top: 0, behavior: 'instant' });
   if(name === 'home') renderDashboard();
-  if(name === 'calendar') renderCalendar();
+  if(name === 'calendar') setCalMode(calMode);
   if(name === 'discover' && !discoverCache) loadDiscover();
   if(name === 'stats') renderStats2();
 }
@@ -2320,6 +2325,76 @@ function formatRelativeDate(dateStr){
   if(diffDays < -1 && diffDays >= -7) return `Hace ${-diffDays} días`;
   return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: diffDays > 300 || diffDays < -300 ? 'numeric' : undefined });
 }
+let calMode = 'upcoming';
+function setCalMode(mode){
+  calMode = mode;
+  document.getElementById('calModeUpcoming').classList.toggle('active', mode === 'upcoming');
+  document.getElementById('calModeHistory').classList.toggle('active', mode === 'history');
+  document.getElementById('calSub').textContent = mode === 'upcoming' ? 'Próximos estrenos de tus series' : 'Qué viste cada día';
+  document.getElementById('refreshCalBtn').style.display = mode === 'upcoming' ? 'flex' : 'none';
+  if(mode === 'upcoming') renderCalendar();
+  else renderWatchHistory();
+}
+
+function formatDayHeading(ts){
+  const d = new Date(ts);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dDate = new Date(d); dDate.setHours(0,0,0,0);
+  const diffDays = Math.round((today - dDate) / 86400000);
+  if(diffDays === 0) return 'Hoy';
+  if(diffDays === 1) return 'Ayer';
+  if(diffDays < 7) return d.toLocaleDateString('es-CL', { weekday: 'long' });
+  const opts = { day: 'numeric', month: 'long' };
+  if(d.getFullYear() !== today.getFullYear()) opts.year = 'numeric';
+  return d.toLocaleDateString('es-CL', opts);
+}
+
+function renderWatchHistory(){
+  const container = document.getElementById('calendarContainer');
+  const entries = [];
+  seriesList.forEach(s => {
+    s.seasons.forEach(se => {
+      se.watched.forEach((w, i) => {
+        if(!w) return;
+        const ts = (se.touchedAt || [])[i];
+        if(!ts) return; // sin fecha registrada (de antes de que empezáramos a guardar esto): no aparece acá
+        entries.push({ ts, title: s.title, poster: s.poster, season: se.number, episode: i + 1 });
+      });
+    });
+  });
+
+  if(entries.length === 0){
+    container.innerHTML = `<div class="empty"><strong>Todavía no hay historial</strong>A medida que marques episodios, van a ir apareciendo acá agrupados por día. Los que ya tenías marcados de antes de esta función no van a aparecer, porque no guardamos su fecha exacta.</div>`;
+    return;
+  }
+
+  entries.sort((a, b) => b.ts - a.ts);
+  const capped = entries.slice(0, 250);
+
+  let html = '';
+  let lastDay = null;
+  capped.forEach(e => {
+    const day = dayString(e.ts);
+    if(day !== lastDay){
+      html += `<div class="cal-group-label">${formatDayHeading(e.ts)}</div>`;
+      lastDay = day;
+    }
+    const poster = e.poster ? `<img class="cal-poster" src="${e.poster}" alt="">` : `<div class="cal-poster"></div>`;
+    html += `<div class="cal-item">
+      ${poster}
+      <div class="cal-info">
+        <div class="cal-title">${escapeHtml(e.title)}</div>
+        <div class="cal-ep">T${e.season} · Ep ${e.episode}</div>
+      </div>
+      <div class="cal-date">${new Date(e.ts).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}</div>
+    </div>`;
+  });
+  if(entries.length > capped.length){
+    html += `<p class="sub" style="text-align:center;margin-top:10px;">Mostrando los ${capped.length} episodios más recientes.</p>`;
+  }
+  container.innerHTML = html;
+}
+
 function renderCalendar(){
   const container = document.getElementById('calendarContainer');
   const withDates = seriesList.filter(s => s.nextEpisode && s.nextEpisode.air_date);
