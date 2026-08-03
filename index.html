@@ -581,7 +581,7 @@
   .detail-status-pill{
     display:inline-flex;align-items:center;gap:6px;
     font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;
-    padding:5px 12px;border-radius:14px;margin:4px 6px 0 0;
+    padding:5px 12px;border-radius:14px;
   }
   .detail-status-pill.st-viendo{background:var(--gold);color:var(--text);}
   .detail-status-pill.st-completada{background:var(--progress-green);color:#fff;}
@@ -591,7 +591,7 @@
   .detail-shared-pill{
     display:inline-flex;align-items:center;gap:6px;
     font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;
-    padding:5px 12px;border-radius:14px;margin:4px 0 0;
+    padding:5px 12px;border-radius:14px;
     background:#B23A7A;color:#fff;
   }
   .detail-progress-line{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#b9aecf;margin:0 0 14px;}
@@ -1718,7 +1718,7 @@ function renderDetail(seriesId){
         <div class="detail-info">
           <p class="detail-title">${escapeHtml(s.title)}</p>
           ${genresHtml}
-          <div>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px;">
             <span class="detail-status-pill st-${status}"><span class="dot"></span>${statusText}</span>
             ${s.shared ? `<span class="detail-shared-pill"><svg class="inline-icon" viewBox="0 0 24 24" style="stroke:#fff;"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Compartida</span>` : ''}
           </div>
