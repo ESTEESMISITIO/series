@@ -446,11 +446,12 @@
   .detail-view{display:none;}
   .detail-view.active{display:block;}
   .detail-back{
-    background:none;border:none;color:var(--teal);
-    font-family:inherit;font-size:13.5px;cursor:pointer;
-    padding:0;margin-bottom:16px;
-    display:flex;align-items:center;gap:6px;
+    background:var(--card);border:1px solid var(--line);color:var(--teal);
+    font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;
+    padding:9px 15px;margin-bottom:16px;border-radius:20px;
+    display:flex;align-items:center;gap:7px;
   }
+  .detail-back:active{transform:scale(.97);filter:brightness(.95);}
   .detail-hero{
     position:relative;
     border-radius:16px;
@@ -516,7 +517,7 @@
   .ep-row:hover{border-color:var(--gold);}
   .ep-row.watched{background:#CFE8CC;border-color:#7FB685;}
   .ep-check{
-    width:22px;height:22px;border-radius:6px;
+    width:22px;height:22px;border-radius:50%;
     border:1.5px solid var(--line);
     flex-shrink:0;
     display:flex;align-items:center;justify-content:center;
@@ -577,7 +578,38 @@
   .status-badge.sindatos{color:#d8d2e3;background:#ffffff14;}
   .status-badge.abandonada{color:#c9c2b8;background:#ffffff14;}
 
-  .progress-track{height:6px;background:var(--bg-soft);border-radius:4px;overflow:hidden;margin:10px 0 16px;}
+  .detail-status-pill{
+    display:inline-flex;align-items:center;gap:6px;
+    font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;
+    padding:5px 12px;border-radius:14px;margin:4px 6px 0 0;
+  }
+  .detail-status-pill.st-viendo{background:var(--gold);color:var(--text);}
+  .detail-status-pill.st-completada{background:var(--progress-green);color:#fff;}
+  .detail-status-pill.st-pendiente{background:var(--gold);color:var(--text);}
+  .detail-status-pill.st-abandonada{background:var(--muted);color:#fff;}
+  .detail-status-pill.st-sindatos{background:#ffffff1f;color:#d8d2e3;}
+  .detail-shared-pill{
+    display:inline-flex;align-items:center;gap:6px;
+    font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;
+    padding:5px 12px;border-radius:14px;margin:4px 0 0;
+    background:#B23A7A;color:#fff;
+  }
+  .detail-progress-line{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#b9aecf;margin:0 0 14px;}
+  .detail-progress-line strong{color:var(--gold);}
+  .pill-ghost{
+    background:var(--card);color:var(--text);border:1px solid var(--line);
+    border-radius:20px;padding:7px 13px;font-size:12px;font-family:'JetBrains Mono',monospace;
+    cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+  }
+  .pill-ghost:active{transform:scale(.96);filter:brightness(.96);}
+  .detail-action-pill{
+    background:#ffffff14;color:#f3efe4;border:none;
+    border-radius:20px;padding:8px 13px;font-size:11.5px;font-family:'JetBrains Mono',monospace;
+    cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+  }
+  .detail-action-pill:active{transform:scale(.96);filter:brightness(.9);}
+
+  .progress-track{height:6px;background:var(--bg-soft);border-radius:4px;overflow:hidden;margin:10px 0 6px;}
   .progress-fill{height:100%;background:linear-gradient(90deg,#8a4f9e,var(--gold));border-radius:4px;transition:width .25s;}
 
   .seasons{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
@@ -1105,8 +1137,8 @@ function tmdbAuthed(url){
 
 // ---------------- tabs ----------------
 function switchTab(name){
+  openSeriesId = null;
   if(name !== 'series'){
-    openSeriesId = null;
     const searchInput = document.getElementById('searchInput');
     if(searchInput && searchInput.value){
       searchInput.value = '';
@@ -1686,18 +1718,21 @@ function renderDetail(seriesId){
         <div class="detail-info">
           <p class="detail-title">${escapeHtml(s.title)}</p>
           ${genresHtml}
-          <span class="status-badge ${status}"><span class="dot"></span>${statusText}</span>
-          ${s.shared ? `<span class="status-badge viendo" style="margin-left:6px;"><span class="dot"></span>👥 Compartida</span>` : ''}
-          ${total ? `<div class="progress-track" style="margin:10px 0 0;"><div class="progress-fill" style="width:${pct}%;background:${status === 'completada' ? 'var(--progress-green)' : status === 'abandonada' ? 'var(--muted)' : 'linear-gradient(90deg,#8a4f9e,var(--gold))'}"></div></div>` : ''}
+          <div>
+            <span class="detail-status-pill st-${status}"><span class="dot"></span>${statusText}</span>
+            ${s.shared ? `<span class="detail-shared-pill"><svg class="inline-icon" viewBox="0 0 24 24" style="stroke:#fff;"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Compartida</span>` : ''}
+          </div>
+          ${total ? `<div class="progress-track"><div class="progress-fill" style="width:${pct}%;background:${status === 'completada' ? 'var(--progress-green)' : status === 'abandonada' ? 'var(--muted)' : 'var(--gold)'}"></div></div>
+          <p class="detail-progress-line"><strong>${pct}%</strong> visto${total - watched > 0 ? ` · faltan <strong>${total - watched}</strong> episodio${total - watched === 1 ? '' : 's'}` : ''}</p>` : ''}
           <div class="detail-actions">
-            ${syncBtn}
-            <button class="btn btn-ghost" onclick="toggleShared('${s.id}')">${s.shared
+            ${s.tmdbId ? `<button class="detail-action-pill" onclick="syncSeries('${s.id}')"><svg class="inline-icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>Actualizar</button>` : ''}
+            <button class="detail-action-pill" onclick="toggleShared('${s.id}')">${s.shared
               ? '<svg class="inline-icon" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Dejar de compartir'
               : `<svg class="inline-icon" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Compartir${(sharedRow && sharedRow.status === 'accepted') ? ' con ' + escapeHtml(partnerNameFor(sharedRow)) : ''}`}</button>
-            <button class="btn btn-ghost" onclick="toggleAbandoned('${s.id}')">${s.abandoned
+            <button class="detail-action-pill" onclick="toggleAbandoned('${s.id}')">${s.abandoned
               ? '<svg class="inline-icon" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>Quitar de abandonadas'
               : '<svg class="inline-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>Marcar como abandonada'}</button>
-            <button class="btn btn-ghost" onclick="removeSeries('${s.id}')"><svg class="inline-icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>Eliminar</button>
+            <button class="detail-action-pill" onclick="removeSeries('${s.id}')"><svg class="inline-icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>Eliminar</button>
           </div>
         </div>
       </div>
@@ -1776,12 +1811,12 @@ async function renderEpisodeList(s, seasonNumber){
   const allWatched = season.watched.every(Boolean);
   if(actions){
     actions.innerHTML = `
-      <button class="btn btn-ghost" onclick="toggleWholeSeason('${s.id}', ${seasonNumber})">
+      <button class="pill-ghost" onclick="toggleWholeSeason('${s.id}', ${seasonNumber})">
         ${allWatched
           ? '<svg class="inline-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>Desmarcar temporada'
           : '<svg class="inline-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Marcar toda la temporada'}
       </button>
-      <button class="btn btn-ghost" onclick="removeSeason('${s.id}', ${seasonNumber})"><svg class="inline-icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>Eliminar T${seasonNumber}</button>
+      <button class="pill-ghost" onclick="removeSeason('${s.id}', ${seasonNumber})"><svg class="inline-icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>Eliminar T${seasonNumber}</button>
     `;
   }
 
@@ -1807,12 +1842,12 @@ async function renderEpisodeList(s, seasonNumber){
     }
 
     return `<div class="ep-row ${w ? 'watched' : ''}" onclick="toggleEpisode('${s.id}', ${seasonNumber}, ${i})">
-      <div class="ep-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
       <div class="ep-num">${seasonNumber}x${String(num).padStart(2,'0')}</div>
       <div class="ep-meta">
         <div class="ep-name">${escapeHtml(name)}</div>
         ${dateHtml}
       </div>
+      <div class="ep-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
     </div>`;
   }).join('') + `</div>`;
 }
