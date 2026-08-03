@@ -964,15 +964,16 @@ create policy "update own" on public.bitacora for update using (auth.uid() = use
 
   <!-- ===== TAB: CALENDARIO ===== -->
   <section class="tab-section" id="tab-calendar">
-    <div class="cal-toolbar">
-      <span class="sub" id="calSub">Próximos estrenos de tus series</span>
-      <button class="btn btn-ghost btn-sm" id="refreshCalBtn"><svg class="inline-icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>Actualizar</button>
-    </div>
-    <div class="category-tabs" style="margin-bottom:16px;">
-      <button class="category-tab active" id="calModeUpcoming" onclick="setCalMode('upcoming')"><span class="dot"></span>Próximos</button>
-      <button class="category-tab" id="calModeHistory" onclick="setCalMode('history')"><span class="dot"></span>Historial</button>
+    <div class="dash-section-title" style="margin-top:0;">
+      <span>Próximos estrenos</span>
+      <button id="refreshCalBtn"><svg class="inline-icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>Actualizar</button>
     </div>
     <div id="calendarContainer"></div>
+
+    <div class="dash-section-title">
+      <span>Historial — qué viste cada día</span>
+    </div>
+    <div id="calHistoryContainer"></div>
   </section>
 
   <!-- ===== TAB: DESCUBRIR ===== -->
@@ -1120,7 +1121,7 @@ function switchTab(name){
   document.getElementById('pageSub').textContent = PAGE_SUBS[name];
   window.scrollTo({ top: 0, behavior: 'instant' });
   if(name === 'home') renderDashboard();
-  if(name === 'calendar') setCalMode(calMode);
+  if(name === 'calendar') renderCalendarTab();
   if(name === 'discover' && !discoverCache) loadDiscover();
   if(name === 'stats') renderStats2();
 }
@@ -2358,15 +2359,9 @@ function formatRelativeDate(dateStr){
   if(diffDays < -1 && diffDays >= -7) return `Hace ${-diffDays} días`;
   return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: diffDays > 300 || diffDays < -300 ? 'numeric' : undefined });
 }
-let calMode = 'upcoming';
-function setCalMode(mode){
-  calMode = mode;
-  document.getElementById('calModeUpcoming').classList.toggle('active', mode === 'upcoming');
-  document.getElementById('calModeHistory').classList.toggle('active', mode === 'history');
-  document.getElementById('calSub').textContent = mode === 'upcoming' ? 'Próximos estrenos de tus series' : 'Qué viste cada día';
-  document.getElementById('refreshCalBtn').style.display = mode === 'upcoming' ? 'flex' : 'none';
-  if(mode === 'upcoming') renderCalendar();
-  else renderWatchHistory();
+function renderCalendarTab(){
+  renderCalendar();
+  renderWatchHistory();
 }
 
 function formatDayHeading(ts){
@@ -2422,7 +2417,7 @@ function selectCalDay(key){
 }
 
 function renderWatchHistory(){
-  const container = document.getElementById('calendarContainer');
+  const container = document.getElementById('calHistoryContainer');
   const entriesByDay = getWatchedEntriesByDay();
 
   if(entriesByDay.size === 0){
