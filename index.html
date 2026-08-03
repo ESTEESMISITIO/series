@@ -599,6 +599,33 @@
   .cal-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px;flex-wrap:wrap;}
   .cal-group-label{font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:20px 0 8px;}
   .cal-group-label:first-of-type{margin-top:0;}
+  .cal-week-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  .cal-week-label{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--muted);}
+  .cal-week-grid{display:grid;grid-template-columns:repeat(7, 1fr);gap:6px;margin-bottom:14px;}
+  .cal-week-day{cursor:default;}
+  .cal-week-day.has-activity{cursor:pointer;}
+  .cal-week-daylabel{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-align:center;margin-bottom:4px;}
+  .cal-week-daylabel.today{color:var(--gold);font-weight:700;}
+  .cal-week-poster, .cal-week-empty{
+    width:100%;aspect-ratio:2/3;border-radius:7px;background:var(--bg-soft);position:relative;overflow:hidden;
+  }
+  .cal-week-empty{border:1.5px dashed var(--line);background:transparent;}
+  .cal-week-poster img{width:100%;height:100%;object-fit:cover;display:block;}
+  .cal-week-count{
+    position:absolute;bottom:3px;right:3px;
+    background:var(--gold);color:var(--text);
+    font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;
+    border-radius:8px;padding:1px 4px;
+  }
+  .cal-week-multi{
+    width:100%;aspect-ratio:2/3;border-radius:7px;overflow:hidden;
+    display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);gap:2px;background:var(--line);
+  }
+  .cal-week-mini{background:var(--bg-soft);overflow:hidden;}
+  .cal-week-mini img{width:100%;height:100%;object-fit:cover;display:block;}
+  .cal-week-day.selected .cal-week-poster,
+  .cal-week-day.selected .cal-week-multi{outline:2.5px solid var(--gold);outline-offset:2px;}
+  .cal-week-detail{background:var(--card);border:1.5px solid var(--gold);border-radius:14px;padding:14px 16px;}
   .cal-item{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px;}
   .cal-poster{width:38px;height:56px;border-radius:5px;object-fit:cover;background:var(--bg-soft);flex-shrink:0;}
   .cal-info{flex:1;min-width:0;}
@@ -2349,49 +2376,129 @@ function formatDayHeading(ts){
   return d.toLocaleDateString('es-CL', opts);
 }
 
-function renderWatchHistory(){
-  const container = document.getElementById('calendarContainer');
-  const entries = [];
+let calWeekAnchor = new Date(); calWeekAnchor.setHours(0,0,0,0);
+let calSelectedDay = null;
+
+function startOfWeek(d){
+  const date = new Date(d);
+  const day = date.getDay(); // 0 = domingo
+  const diff = (day === 0 ? -6 : 1) - day; // arranca lunes
+  date.setDate(date.getDate() + diff);
+  date.setHours(0,0,0,0);
+  return date;
+}
+
+function getWatchedEntriesByDay(){
+  const map = new Map();
   seriesList.forEach(s => {
     s.seasons.forEach(se => {
       se.watched.forEach((w, i) => {
         if(!w) return;
         const ts = (se.touchedAt || [])[i];
-        if(!ts) return; // sin fecha registrada (de antes de que empezáramos a guardar esto): no aparece acá
-        entries.push({ ts, title: s.title, poster: s.poster, season: se.number, episode: i + 1 });
+        if(!ts) return; // sin fecha registrada (de antes de esta función): no aparece acá
+        const key = dayString(ts);
+        if(!map.has(key)) map.set(key, []);
+        map.get(key).push({ ts, seriesId: s.id, title: s.title, poster: s.poster, season: se.number, episode: i + 1 });
       });
     });
   });
+  return map;
+}
 
-  if(entries.length === 0){
-    container.innerHTML = `<div class="empty"><strong>Todavía no hay historial</strong>A medida que marques episodios, van a ir apareciendo acá agrupados por día. Los que ya tenías marcados de antes de esta función no van a aparecer, porque no guardamos su fecha exacta.</div>`;
+function shiftCalWeek(dir){
+  calWeekAnchor.setDate(calWeekAnchor.getDate() + dir * 7);
+  calSelectedDay = null;
+  renderWatchHistory();
+}
+function selectCalDay(key){
+  calSelectedDay = (calSelectedDay === key) ? null : key;
+  renderWatchHistory();
+}
+
+function renderWatchHistory(){
+  const container = document.getElementById('calendarContainer');
+  const entriesByDay = getWatchedEntriesByDay();
+
+  if(entriesByDay.size === 0){
+    container.innerHTML = `<div class="empty"><strong>Todavía no hay historial</strong>A medida que marques episodios, van a ir apareciendo acá. Los que ya tenías marcados de antes de esta función no aparecen, porque no guardamos su fecha exacta.</div>`;
     return;
   }
 
-  entries.sort((a, b) => b.ts - a.ts);
-  const capped = entries.slice(0, 250);
+  const weekStart = startOfWeek(calWeekAnchor);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const isCurrentWeek = startOfWeek(today).getTime() === weekStart.getTime();
+  const todayKey = dayString(today.getTime());
 
-  let html = '';
-  let lastDay = null;
-  capped.forEach(e => {
-    const day = dayString(e.ts);
-    if(day !== lastDay){
-      html += `<div class="cal-group-label">${formatDayHeading(e.ts)}</div>`;
-      lastDay = day;
-    }
-    const poster = e.poster ? `<img class="cal-poster" src="${e.poster}" alt="">` : `<div class="cal-poster"></div>`;
-    html += `<div class="cal-item">
-      ${poster}
-      <div class="cal-info">
-        <div class="cal-title">${escapeHtml(e.title)}</div>
-        <div class="cal-ep">T${e.season} · Ep ${e.episode}</div>
-      </div>
-      <div class="cal-date">${new Date(e.ts).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}</div>
-    </div>`;
-  });
-  if(entries.length > capped.length){
-    html += `<p class="sub" style="text-align:center;margin-top:10px;">Mostrando los ${capped.length} episodios más recientes.</p>`;
+  const days = [];
+  for(let i = 0; i < 7; i++){
+    const d = new Date(weekStart);
+    d.setDate(d.getDate() + i);
+    days.push(d);
   }
+  const weekLabel = `${days[0].toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })} – ${days[6].toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}`;
+
+  const gridHtml = days.map(d => {
+    const key = dayString(d.getTime());
+    const dayEntries = entriesByDay.get(key) || [];
+    const isToday = key === todayKey;
+    const dayLabel = isToday ? 'HOY' : d.toLocaleDateString('es-CL', { weekday: 'short' }).replace('.', '').toUpperCase();
+
+    let cellInner;
+    if(dayEntries.length === 0){
+      cellInner = `<div class="cal-week-empty"></div>`;
+    } else {
+      const bySeries = new Map();
+      dayEntries.forEach(e => {
+        if(!bySeries.has(e.seriesId)) bySeries.set(e.seriesId, { poster: e.poster, count: 0 });
+        bySeries.get(e.seriesId).count++;
+      });
+      const uniqueShows = [...bySeries.values()];
+      if(uniqueShows.length === 1){
+        const show = uniqueShows[0];
+        cellInner = `<div class="cal-week-poster">
+          ${show.poster ? `<img src="${show.poster}" alt="">` : ''}
+          ${show.count > 1 ? `<span class="cal-week-count">${show.count}</span>` : ''}
+        </div>`;
+      } else {
+        cellInner = `<div class="cal-week-multi">` + uniqueShows.slice(0, 4).map(sh =>
+          `<div class="cal-week-mini">${sh.poster ? `<img src="${sh.poster}" alt="">` : ''}</div>`
+        ).join('') + `</div>`;
+      }
+    }
+
+    return `<div class="cal-week-day ${calSelectedDay === key ? 'selected' : ''} ${dayEntries.length ? 'has-activity' : ''}" ${dayEntries.length ? `onclick="selectCalDay('${key}')"` : ''}>
+      <div class="cal-week-daylabel ${isToday ? 'today' : ''}">${dayLabel} ${d.getDate()}</div>
+      ${cellInner}
+    </div>`;
+  }).join('');
+
+  let html = `
+    <div class="cal-week-nav">
+      <button class="btn btn-ghost btn-sm" onclick="shiftCalWeek(-1)">← Semana anterior</button>
+      <span class="cal-week-label">${weekLabel}</span>
+      <button class="btn btn-ghost btn-sm" onclick="shiftCalWeek(1)" ${isCurrentWeek ? 'disabled' : ''}>Semana siguiente →</button>
+    </div>
+    <div class="cal-week-grid">${gridHtml}</div>
+  `;
+
+  if(calSelectedDay && entriesByDay.get(calSelectedDay)){
+    const dEntries = entriesByDay.get(calSelectedDay).sort((a, b) => a.ts - b.ts);
+    html += `<div class="cal-week-detail">
+      <div class="cal-group-label" style="margin-top:0;">${formatDayHeading(dEntries[0].ts)} — ${dEntries.length} episodio${dEntries.length === 1 ? '' : 's'}</div>
+      ${dEntries.map(e => `
+        <div class="cal-item">
+          ${e.poster ? `<img class="cal-poster" src="${e.poster}" alt="">` : `<div class="cal-poster"></div>`}
+          <div class="cal-info">
+            <div class="cal-title">${escapeHtml(e.title)}</div>
+            <div class="cal-ep">T${e.season} · Ep ${e.episode}</div>
+          </div>
+          <div class="cal-date">${new Date(e.ts).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}</div>
+        </div>`).join('')}
+    </div>`;
+  } else {
+    html += `<p class="sub" style="text-align:center;">Toca un día con actividad para ver el detalle.</p>`;
+  }
+
   container.innerHTML = html;
 }
 
