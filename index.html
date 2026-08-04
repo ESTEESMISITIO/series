@@ -631,8 +631,16 @@
   .cal-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px;flex-wrap:wrap;}
   .cal-group-label{font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:20px 0 8px;}
   .cal-group-label:first-of-type{margin-top:0;}
-  .cal-week-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
-  .cal-week-label{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--muted);}
+  .cal-week-nav{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:14px;}
+  .cal-week-label{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--muted);flex:1;text-align:center;}
+  .cal-week-arrow{
+    width:32px;height:32px;border-radius:50%;flex-shrink:0;
+    background:var(--card);border:1px solid var(--line);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .cal-week-arrow svg{width:16px;height:16px;stroke:var(--text);fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;}
+  .cal-week-arrow:disabled{opacity:.35;cursor:default;}
+  .cal-week-arrow:active:not(:disabled){transform:scale(.94);}
   .cal-week-grid{display:grid;grid-template-columns:repeat(7, 1fr);gap:6px;margin-bottom:14px;}
   .cal-week-day{cursor:default;}
   .cal-week-day.has-activity{cursor:pointer;}
@@ -2510,9 +2518,9 @@ function renderWatchHistory(){
 
   let html = `
     <div class="cal-week-nav">
-      <button class="btn btn-ghost btn-sm" onclick="shiftCalWeek(-1)">← Semana anterior</button>
+      <button class="cal-week-arrow" onclick="shiftCalWeek(-1)" title="Semana anterior"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
       <span class="cal-week-label">${weekLabel}</span>
-      <button class="btn btn-ghost btn-sm" onclick="shiftCalWeek(1)" ${isCurrentWeek ? 'disabled' : ''}>Semana siguiente →</button>
+      <button class="cal-week-arrow" onclick="shiftCalWeek(1)" title="Semana siguiente" ${isCurrentWeek ? 'disabled' : ''}><svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
     </div>
     <div class="cal-week-grid">${gridHtml}</div>
   `;
@@ -2563,8 +2571,8 @@ function renderCalendar(){
     </div>`;
   }
   let html = '';
-  if(upcoming.length){ html += `<div class="cal-group-label">Próximos</div>` + upcoming.map(itemHtml).join(''); }
-  if(past.length){ html += `<div class="cal-group-label">Recientes</div>` + past.slice(0,10).map(itemHtml).join(''); }
+  if(upcoming.length){ html += upcoming.map(itemHtml).join(''); }
+  if(past.length){ html += `<div class="cal-group-label">Estrenos vencidos (revisa si ya salieron)</div>` + past.slice(0,10).map(itemHtml).join(''); }
   container.innerHTML = html;
 }
 document.getElementById('refreshCalBtn').addEventListener('click', async () => {
